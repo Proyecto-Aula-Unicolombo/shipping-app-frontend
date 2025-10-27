@@ -1,128 +1,69 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { vehiclesMock, type VehicleListItem } from "@/mocks/vehicles";
+import { useVehicleStore } from "../stores/vehicleStore";
+import type { CreateVehicleSchema } from "../schemas/createVehicle.schema";
+import type { VehicleListItem } from "@/mocks/vehicles";
 
-// Simulate API delay
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const VEHICLES_QUERY_KEY = ["vehicles"] as const;
 
-// Mock API functions
+// Simulate API functions
 const fetchVehicles = async (): Promise<VehicleListItem[]> => {
-    await delay(500);
-    return vehiclesMock;
+    // In a real app, this would be an API call
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return useVehicleStore.getState().vehicles;
 };
 
-const updateVehicleAssignment = async ({ vehicleId, driverId }: { vehicleId: number; driverId?: number }): Promise<VehicleListItem> => {
-    await delay(300);
-    const vehicle = vehiclesMock.find(v => v.id === vehicleId);
-    if (!vehicle) {
-        throw new Error("Vehicle not found");
-    }
-    
-    // Update the mock data
-    vehicle.driverId = driverId;
-    vehicle.driverName = driverId ? `Driver ${driverId}` : undefined;
-    
-    return vehicle;
+const createVehicleAPI = async (data: CreateVehicleSchema): Promise<VehicleListItem> => {
+    // Use the store's createVehicle method which handles the logic
+    return useVehicleStore.getState().createVehicle(data);
 };
 
-const createVehicle = async (vehicleData: Omit<VehicleListItem, 'id'>): Promise<VehicleListItem> => {
-    await delay(500);
-    const newVehicle: VehicleListItem = {
-        ...vehicleData,
-        id: Math.max(...vehiclesMock.map(v => v.id)) + 1,
-    };
-    vehiclesMock.push(newVehicle);
-    return newVehicle;
-};
-
-const deleteVehicle = async (vehicleId: number): Promise<void> => {
-    await delay(300);
-    const index = vehiclesMock.findIndex(v => v.id === vehicleId);
-    if (index === -1) {
-        throw new Error("Vehicle not found");
-    }
-    vehiclesMock.splice(index, 1);
-};
 
 export function useVehicleQueryStore() {
     const queryClient = useQueryClient();
+    const { vehicles, setVehicles } = useVehicleStore();
 
-    // Query for fetching all vehicles
-    const {
-        data: vehicles = [],
-        isLoading,
-        isError,
-        error,
-    } = useQuery({
-        queryKey: ["vehicles"],
+    // Query for fetching vehicles list
+    const vehiclesQuery = useQuery({
+        queryKey: VEHICLES_QUERY_KEY,
         queryFn: fetchVehicles,
+        initialData: vehicles,
         staleTime: 5 * 60 * 1000, // 5 minutes
     });
 
-    // Mutation for updating vehicle assignment
-    const {
-        mutateAsync: updateVehicleAssignmentAsync,
-        isPending: isUpdatingAssignment,
-        error: updateAssignmentError,
-    } = useMutation({
-        mutationFn: updateVehicleAssignment,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-        },
-    });
-
     // Mutation for creating a new vehicle
-    const {
-        mutateAsync: createVehicleAsync,
-        isPending: isCreatingVehicle,
-        error: createVehicleError,
-    } = useMutation({
-        mutationFn: createVehicle,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+    const createVehicleMutation = useMutation({
+        mutationFn: createVehicleAPI,
+        onSuccess: (newVehicle) => {
+            // Update the query cache with the new vehicle
+            queryClient.setQueryData(VEHICLES_QUERY_KEY, (oldData: VehicleListItem[] | undefined) => {
+                if (!oldData) return [newVehicle];
+                return [...oldData, newVehicle];
+            });
+
+            // Also update the Zustand store to keep them in sync
+            const currentVehicles = queryClient.getQueryData<VehicleListItem[]>(VEHICLES_QUERY_KEY) || [];
+            setVehicles(currentVehicles);
+        },
+        onError: (error) => {
+            console.error("Error creating vehicle:", error);
         },
     });
-
-    // Mutation for deleting a vehicle
-    const {
-        mutateAsync: deleteVehicleAsync,
-        isPending: isDeletingVehicle,
-        error: deleteVehicleError,
-    } = useMutation({
-        mutationFn: deleteVehicle,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ["vehicles"] });
-        },
-    });
-
-    // Helper functions
-    const getVehicleById = (id: number) => {
-        return vehicles.find(vehicle => vehicle.id === id);
-    };
-
-    const getVehiclesByDriverId = (driverId: number) => {
-        return vehicles.filter(vehicle => vehicle.driverId === driverId);
-    };
-
-    const getUnassignedVehicles = () => {
-        return vehicles.filter(vehicle => !vehicle.driverId);
-    };
 
     return {
-        vehicles,
-        isLoading,
-        isError,
-        error,
-        updateVehicleAssignmentAsync,
-        isUpdatingAssignment,
-        updateAssignmentError,
-        createVehicleAsync,
-        isCreatingVehicle,
-        createVehicleError,
-        deleteVehicleAsync,
-        isDeletingVehicle,
-        deleteVehicleError,
-        getVehicleById,
-        getVehiclesByDriverId,
-        getUnassignedVehicles,
+        // Query data
+        vehicles: vehiclesQuery.data || [],
+        isLoading: vehiclesQuery.isLoading,
+        isError: vehiclesQuery.isError,
+        error: vehiclesQuery.error,
+
+        // Mutation data
+        createVehicle: createVehicleMutation.mutate,
+        createVehicleAsync: createVehicleMutation.mutateAsync,
+        isCreating: createVehicleMutation.isPending,
+        createError: createVehicleMutation.error,
+        
+        // Utility functions
+        refetch: vehiclesQuery.refetch,
+        invalidate: () => queryClient.invalidateQueries({ queryKey: VEHICLES_QUERY_KEY }),
     };
 }

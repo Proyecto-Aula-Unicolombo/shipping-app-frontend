@@ -8,11 +8,15 @@ export const ROUTES = {
         createOrder: "/ordenes/crear",
         drivers: "/conductores",
         vehicles: "/vehiculos",
+        createVehicle: "/vehiculos/crear",
+        editVehicle: (id: number) => `/vehiculos/${id}/editar`,
         incidents: "/incidencias",
         settings: "/configuracion",
     },
     settings: {
         users: "/configuracion/usuarios",
+        createUser: "/configuracion/usuarios/crear",
+        editUser: (id: number) => `/configuracion/usuarios/${id}/editar`,
     }
 } as const;
 

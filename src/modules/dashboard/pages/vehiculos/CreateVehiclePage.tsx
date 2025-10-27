@@ -21,7 +21,7 @@ import {
 
 export default function CreateVehiclePage() {
     const router = useRouter();
-    const { createVehicleAsync, isCreatingVehicle, createVehicleError } = useVehicleQueryStore();
+    const { createVehicleAsync, isCreating, createError } = useVehicleQueryStore();
     const { drivers } = useDriverQueryStore();
 
     const {
@@ -36,17 +36,8 @@ export default function CreateVehiclePage() {
 
     const onSubmit = async (data: CreateVehicleSchema) => {
         try {
-            const vehicleData = {
-                Plate: data.plate,
-                Brand: data.brand,
-                Model: data.model,
-                Color: data.color,
-                VehicleType: data.vehicleType,
-                driverId: data.driverId,
-                driverName: data.driverId ? drivers.find(d => d.id === data.driverId)?.User.Name : undefined,
-            };
-
-            await createVehicleAsync(vehicleData);
+            // Pass the data directly as the hook expects it in the schema format
+            await createVehicleAsync(data);
             router.push(ROUTES.dashboard.vehicles);
         } catch (error) {
             console.error("Error creating vehicle:", error);
@@ -172,10 +163,10 @@ export default function CreateVehiclePage() {
                 </section>
 
                 {/* Error Display */}
-                {createVehicleError && (
+                {createError && (
                     <div className="rounded-lg bg-red-50 p-4">
                         <p className="text-sm text-red-700">
-                            Error al crear vehículo: {createVehicleError instanceof Error ? createVehicleError.message : "Error desconocido"}
+                            Error al crear vehículo: {createError instanceof Error ? createError.message : "Error desconocido"}
                         </p>
                     </div>
                 )}
@@ -184,16 +175,16 @@ export default function CreateVehiclePage() {
                 <div className="flex gap-4">
                     <Button
                         type="submit"
-                        disabled={isCreatingVehicle}
+                        disabled={isCreating}
                         className="flex-1 md:flex-none"
                     >
-                        {isCreatingVehicle ? "Creando..." : "Crear Vehículo"}
+                        {isCreating ? "Creando..." : "Crear Vehículo"}
                     </Button>
                     <Button
                         type="button"
                         variant="secondary"
                         onClick={handleCancel}
-                        disabled={isCreatingVehicle}
+                        disabled={isCreating}
                         className="flex-1 md:flex-none"
                     >
                         Cancelar

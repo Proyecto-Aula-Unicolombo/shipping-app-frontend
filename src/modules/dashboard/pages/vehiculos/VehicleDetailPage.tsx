@@ -5,9 +5,10 @@ import Link from "next/link";
 import { PageHeader } from "../../components/PageHeader";
 import { useVehicleQueryStore } from "../../vehicles/hooks/useVehicleQueryStore";
 import { BackButton } from "../../components/BackButton";
+import { Vehicle } from "@/types";
 
 type VehicleDetailPageProps = {
-    vehicle: any;
+    vehicle: Vehicle;
 };
 
 export function VehicleDetailPage({ vehicle: initialVehicle }: VehicleDetailPageProps) {

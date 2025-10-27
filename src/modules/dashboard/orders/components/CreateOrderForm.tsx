@@ -7,17 +7,19 @@ import { Input } from "@/modules/shared/ui/Input";
 import { useOrderQueryStore } from "../hooks/useOrderQueryStore";
 import { ROUTES } from "@/modules/shared/constants/routes";
 import type { PackageForSelection } from "../types/orderTypes";
+import { getAvailableDrivers } from "@/mocks/drivers";
+import { getAvailableVehicles } from "@/mocks/vehicles";
 
 export function CreateOrderForm() {
     const router = useRouter();
-    const { 
-        availablePackages, 
-        selectedPackages, 
-        togglePackageSelection, 
+    const {
+        availablePackages,
+        selectedPackages,
+        togglePackageSelection,
         removeSelectedPackage,
-        createOrderAsync, 
-        isCreating, 
-        createError 
+        createOrderAsync,
+        isCreating,
+        createError
     } = useOrderQueryStore();
 
     // Form state
@@ -25,6 +27,12 @@ export function CreateOrderForm() {
     const [deliveryDate, setDeliveryDate] = useState("");
     const [priority, setPriority] = useState<"Alta" | "Media" | "Baja">("Media");
     const [notes, setNotes] = useState("");
+    const [driverId, setDriverId] = useState<number | null>(null);
+    const [vehicleId, setVehicleId] = useState<number | null>(null);
+
+    // Get available drivers and vehicles
+    const availableDrivers = getAvailableDrivers();
+    const availableVehicles = getAvailableVehicles();
 
     const handlePackageToggle = (packageId: string) => {
         togglePackageSelection(packageId);
@@ -36,14 +44,24 @@ export function CreateOrderForm() {
 
     const onSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (selectedPackages.length === 0) {
             alert("Debe seleccionar al menos un paquete");
             return;
         }
-        
+
         if (!deliveryDate) {
             alert("Debe seleccionar una fecha de entrega");
+            return;
+        }
+
+        if (!driverId) {
+            alert("Debe seleccionar un conductor");
+            return;
+        }
+
+        if (!vehicleId) {
+            alert("Debe seleccionar un vehículo");
             return;
         }
 
@@ -53,6 +71,8 @@ export function CreateOrderForm() {
                 serviceType,
                 deliveryDate,
                 priority,
+                driverId,
+                vehicleId,
                 notes: notes || undefined,
             });
             router.push(ROUTES.dashboard.orders);
@@ -67,7 +87,7 @@ export function CreateOrderForm() {
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-slate-900">Paquetes disponibles</h2>
                 <p className="text-sm text-slate-600">Selecciona paquetes disponibles y agrégalos a una orden</p>
-                
+
                 <div className="rounded-xl border border-slate-200 overflow-hidden">
                     <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
                         <div className="grid grid-cols-5 gap-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -112,7 +132,7 @@ export function CreateOrderForm() {
             {selectedPackages.length > 0 && (
                 <section className="space-y-4">
                     <h2 className="text-lg font-semibold text-slate-900">Selected Packages</h2>
-                    
+
                     <div className="rounded-xl border border-slate-200 overflow-hidden">
                         <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
                             <div className="grid grid-cols-5 gap-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -199,6 +219,46 @@ export function CreateOrderForm() {
                             <option value="Baja">Baja</option>
                         </select>
                     </div>
+
+                    {/* Driver Selection */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">
+                            Conductor *
+                        </label>
+                        <select
+                            value={driverId || ""}
+                            onChange={(e) => setDriverId(e.target.value ? Number(e.target.value) : null)}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            required
+                        >
+                            <option value="">Seleccionar conductor</option>
+                            {availableDrivers.map((driver) => (
+                                <option key={driver.id} value={driver.id}>
+                                    {driver.User.Name} {driver.User.LastName} - {driver.License}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Vehicle Selection */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-slate-700">
+                            Vehículo *
+                        </label>
+                        <select
+                            value={vehicleId || ""}
+                            onChange={(e) => setVehicleId(e.target.value ? Number(e.target.value) : null)}
+                            className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            required
+                        >
+                            <option value="">Seleccionar vehículo</option>
+                            {availableVehicles.map((vehicle) => (
+                                <option key={vehicle.id} value={vehicle.id}>
+                                    {vehicle.Plate} - {vehicle.Brand} {vehicle.Model} ({vehicle.VehicleType})
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
 
                 {/* Notes */}
@@ -226,9 +286,9 @@ export function CreateOrderForm() {
 
                 {/* Submit Button */}
                 <div className="flex justify-end">
-                    <Button 
-                        type="submit" 
-                        disabled={isCreating || selectedPackages.length === 0}
+                    <Button
+                        type="submit"
+                        disabled={isCreating || selectedPackages.length === 0 || !driverId || !vehicleId}
                         className="px-8"
                     >
                         {isCreating ? "Creando..." : "Crear orden"}

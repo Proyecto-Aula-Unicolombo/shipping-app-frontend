@@ -4,7 +4,8 @@ export type VehicleListItem = Vehicle;
 
 export type VehicleDetail = VehicleListItem;
 
-export const vehiclesMock: VehicleListItem[] = [
+// Make the array mutable so stores can modify it
+const vehiclesMockData: VehicleListItem[] = [
     {
         id: 201,
         Plate: "XYZ 123",
@@ -12,6 +13,8 @@ export const vehiclesMock: VehicleListItem[] = [
         Model: "Hiace",
         Color: "Blanco",
         VehicleType: "Furgoneta",
+        driverId: 1,
+        driverName: "Carlos Ramírez",
     },
     {
         id: 202,
@@ -20,6 +23,8 @@ export const vehiclesMock: VehicleListItem[] = [
         Model: "H350",
         Color: "Gris",
         VehicleType: "Camión",
+        driverId: 2,
+        driverName: "Sofía García",
     },
     {
         id: 203,
@@ -28,6 +33,8 @@ export const vehiclesMock: VehicleListItem[] = [
         Model: "Transit",
         Color: "Azul",
         VehicleType: "Furgón",
+        driverId: 3,
+        driverName: "Diego Martínez",
     },
     {
         id: 204,
@@ -79,10 +86,25 @@ export const vehiclesMock: VehicleListItem[] = [
     },
 ];
 
+// Export the mutable array
+export const vehiclesMock = vehiclesMockData;
+
+// Functions to manipulate the mock data
+export function addVehicleToMock(vehicle: VehicleListItem): void {
+    vehiclesMockData.push(vehicle);
+}
+
+export function updateVehicleInMock(id: number, updates: Partial<VehicleListItem>): void {
+    const index = vehiclesMockData.findIndex(vehicle => vehicle.id === id);
+    if (index !== -1) {
+        vehiclesMockData[index] = { ...vehiclesMockData[index], ...updates };
+    }
+}
+
 export function getVehicleById(id: number): VehicleListItem | undefined {
-    return vehiclesMock.find((vehicle) => vehicle.id === id);
+    return vehiclesMockData.find((vehicle: VehicleListItem) => vehicle.id === id);
 }
 
 export function getAvailableVehicles(): VehicleListItem[] {
-    return vehiclesMock;
+    return vehiclesMockData;
 }

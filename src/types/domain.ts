@@ -25,6 +25,7 @@ export interface Driver {
     License: string;
     UserID: number;
     User: User;
+    Vehicle?: Vehicle; // Optional relationship with Vehicle
 }
 
 export interface Vehicle {
@@ -34,6 +35,8 @@ export interface Vehicle {
     Model: string;
     Color: string;
     VehicleType: string;
+    driverId?: number; // Foreign key to Driver
+    driverName?: string; // Computed field for display
 }
 
 export interface Orders {

@@ -25,6 +25,16 @@ export const driversMock: DriverListItem[] = [
         status: "Activo",
         lastOrderNumber: "12345",
         Address: "Calle 10 #45-23, Medellín, Colombia",
+        Vehicle: {
+            id: 201,
+            Plate: "XYZ 123",
+            Brand: "Toyota",
+            Model: "Hiace",
+            Color: "Blanco",
+            VehicleType: "Furgoneta",
+            driverId: 1,
+            driverName: "Carlos Ramírez"
+        },
     },
     {
         id: 2,
@@ -42,6 +52,16 @@ export const driversMock: DriverListItem[] = [
         status: "Inactivo",
         lastOrderNumber: "67890",
         Address: "Carrera 25 #15-30, Bogotá, Colombia",
+        Vehicle: {
+            id: 202,
+            Plate: "ABC 456",
+            Brand: "Hyundai",
+            Model: "H350",
+            Color: "Gris",
+            VehicleType: "Camión",
+            driverId: 2,
+            driverName: "Sofía García"
+        },
     },
     {
         id: 3,
@@ -59,6 +79,16 @@ export const driversMock: DriverListItem[] = [
         status: "Activo",
         lastOrderNumber: "11223",
         Address: "Av. Las Palmas 120, Medellín, Colombia",
+        Vehicle: {
+            id: 203,
+            Plate: "JKL 890",
+            Brand: "Ford",
+            Model: "Transit",
+            Color: "Azul",
+            VehicleType: "Furgón",
+            driverId: 3,
+            driverName: "Diego Martínez"
+        },
     },
     {
         id: 4,
