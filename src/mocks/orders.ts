@@ -467,26 +467,56 @@ export const packagesMock: Package[] = [
     }
 ];
 
-export function getOrderById(id: number): OrderListItem | undefined {
-    return ordersMock.find((order) => order.id === id);
-}
-
-export function getUnassignedOrders(): Omit<OrderListItem, 'DriverID' | 'VehicleID'>[] {
-    return unassignedOrdersMock;
-}
-
+// Package-related functions (keep these in mocks as they're not moved to stores yet)
 export function getPackagesByOrderId(orderId: number): Package[] {
     return packagesMock.filter((pkg) => pkg.OrderID === orderId);
 }
 
+export function getPackageById(id: number): Package | undefined {
+    return packagesMock.find((pkg) => pkg.id === id);
+}
+
+// Legacy functions - these are now handled by the stores
+// @deprecated Use useOrdersStore or useOrderQueryStore instead
+export function getOrderById(id: number): OrderListItem | undefined {
+    return ordersMock.find((order) => order.id === id);
+}
+
+// @deprecated Use useOrdersStore or useOrderQueryStore instead
+export function getUnassignedOrders(): Omit<OrderListItem, 'DriverID' | 'VehicleID'>[] {
+    return unassignedOrdersMock;
+}
+
+// @deprecated Use useOrdersStore or useOrderQueryStore instead
 export function getOrdersByStatus(status: string): OrderListItem[] {
     return ordersMock.filter((order) => order.Status.toLowerCase() === status.toLowerCase());
 }
 
+// @deprecated Use useOrdersStore or useOrderQueryStore instead
 export function getOrdersByServiceType(serviceType: "Standard Delivery" | "Express Delivery"): OrderListItem[] {
     return ordersMock.filter((order) => order.ServiceType === serviceType);
 }
 
-export function getPackageById(id: number): Package | undefined {
-    return packagesMock.find((pkg) => pkg.id === id);
+// @deprecated Use useOrdersStore or useOrderQueryStore instead
+export function assignDriverToOrder(orderId: number, driverId: number): OrderListItem | null {
+    const orderIndex = ordersMock.findIndex(order => order.id === orderId);
+    if (orderIndex === -1) return null;
+
+    ordersMock[orderIndex] = { ...ordersMock[orderIndex], DriverID: driverId };
+    return ordersMock[orderIndex];
+}
+
+// @deprecated Use useOrdersStore or useOrderQueryStore instead
+export function unassignDriverFromOrder(orderId: number): OrderListItem | null {
+    const orderIndex = ordersMock.findIndex(order => order.id === orderId);
+    if (orderIndex === -1) return null;
+
+    // Remove driver and vehicle assignment
+    ordersMock[orderIndex] = { ...ordersMock[orderIndex], DriverID: undefined, VehicleID: undefined };
+    return ordersMock[orderIndex];
+}
+
+// @deprecated Use useOrdersStore or useOrderQueryStore instead
+export function getOrdersByDriverId(driverId: number): OrderListItem[] {
+    return ordersMock.filter(order => order.DriverID === driverId);
 }

@@ -5,86 +5,41 @@ import { useParams, useRouter } from "next/navigation";
 import { PageHeader } from "../../components/PageHeader";
 import { BackButton } from "../../components/BackButton";
 import { Button } from "@/modules/shared/ui/Button";
-import { Table, type TableColumn } from "@/modules/shared/components/table/Table";
+import { FormField } from "@/modules/shared/ui/FormField";
+import { Select } from "@/modules/shared/ui/Select";
 import { ROUTES } from "@/modules/shared/constants/routes";
-import { driversMock, type DriverListItem } from "@/mocks/drivers";
+import { useDriverQueryStore } from "../../drivers/hooks/useDriverQueryStore";
+import { useVehicleQueryStore } from "../../vehicles/hooks/useVehicleQueryStore";
 import { getUnassignedOrders } from "@/mocks/orders";
 
-type DriverAvailabilityStatus = "Disponible" | "No disponible";
-
-type DriverRow = Record<string, unknown> & {
-    id: number;
-    driverName: string;
-    vehicle: string;
-    status: DriverAvailabilityStatus;
-    selected: boolean;
-    actions?: null;
-};
-
-const AVAILABILITY_STATUS_STYLES: Record<DriverAvailabilityStatus, string> = {
-    "Disponible": "bg-emerald-50 text-emerald-700",
-    "No disponible": "bg-red-50 text-red-700",
-};
 
 export default function AssignDriverPage() {
     const params = useParams();
     const router = useRouter();
     const orderId = params.orderId as string;
     
-    const [selectedDriverId, setSelectedDriverId] = useState<number | null>(null);
+    const [selectedDriverId, setSelectedDriverId] = useState<number | undefined>(undefined);
+    const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
+    
+    // Get drivers and vehicles from hooks
+    const { drivers } = useDriverQueryStore();
+    const { vehicles } = useVehicleQueryStore();
     
     // Find the order being assigned
     const unassignedOrders = getUnassignedOrders();
     const currentOrder = unassignedOrders.find(order => order.id.toString() === orderId);
     
-    // Mock available drivers with availability status
-    const availableDrivers: (DriverListItem & { availability: DriverAvailabilityStatus })[] = driversMock.map((driver, index) => ({
-        ...driver,
-        availability: index % 3 === 1 ? "No disponible" : "Disponible" as DriverAvailabilityStatus
-    }));
+    // Filter available drivers (only active ones)
+    const availableDrivers = drivers.filter(driver => driver.status === "Activo");
+    const availableVehicles = vehicles;
 
-    const columns: TableColumn<DriverRow>[] = [
-        { key: "driverName", label: "Nombre de Conductor" },
-        { key: "vehicle", label: "Vehículo" },
-        {
-            key: "status",
-            label: "Estatus",
-            render: (value) => (
-                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${AVAILABILITY_STATUS_STYLES[value as DriverAvailabilityStatus]}`}>
-                    {value as string}
-                </span>
-            ),
-        },
-        {
-            key: "selected",
-            label: "Select",
-            render: (_, row) => (
-                <input
-                    type="radio"
-                    name="selectedDriver"
-                    checked={selectedDriverId === row.id}
-                    onChange={() => setSelectedDriverId(row.id)}
-                    disabled={row.status === "No disponible"}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 disabled:opacity-50"
-                />
-            ),
-        },
-    ];
-
-    const tableRows = availableDrivers.map<DriverRow>((driver) => ({
-        id: driver.id,
-        driverName: `${driver.User.Name} ${driver.User.LastName}`,
-        vehicle: `${driver.Vehicle.Brand} ${driver.Vehicle.Model}`,
-        status: driver.availability,
-        selected: selectedDriverId === driver.id,
-        actions: null,
-    }));
 
     const handleConfirmAssignment = () => {
-        if (selectedDriverId) {
+        if (selectedDriverId && selectedVehicleId) {
             const selectedDriver = availableDrivers.find(d => d.id === selectedDriverId);
-            console.log(`Asignando orden ${orderId} al conductor ${selectedDriver?.User.Name} ${selectedDriver?.User.LastName}`);
-            // Here you would typically make an API call to assign the order
+            const selectedVehicle = availableVehicles.find(v => v.id === selectedVehicleId);
+            console.log(`Asignando orden ${orderId} al conductor ${selectedDriver?.User.Name} ${selectedDriver?.User.LastName} con vehículo ${selectedVehicle?.Plate}`);
+            // Here you would typically make an API call to assign the order with both driver and vehicle
             router.push(ROUTES.dashboard.orders);
         }
     };
@@ -94,11 +49,11 @@ export default function AssignDriverPage() {
             <div className="flex items-center gap-4">
                 <BackButton />
                 <div>
-                    <PageHeader eyebrow="Ordenes" title="Asignar ordenes a conductores" />
+                    <PageHeader eyebrow="Ordenes" title="Asignar Conductor y Vehículo" />
                     <p className="text-sm text-slate-600 mt-1">
                         {currentOrder 
                             ? `Asignando orden ORD-2023-${orderId.padStart(3, '0')} para ${currentOrder.ClientName}`
-                            : "Selecciona un conductor y asignale una orden"
+                            : "Selecciona un conductor y un vehículo para asignar a la orden"
                         }
                     </p>
                 </div>
@@ -129,28 +84,67 @@ export default function AssignDriverPage() {
 
             <div className="space-y-6">
                 <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-4">Conductores disponibles</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-6">Asignación de Conductor y Vehículo</h3>
                     
-                    <div className="space-y-4">
-                        <Table
-                            columns={columns}
-                            data={tableRows}
-                            getRowKey={(row) => row.id}
-                            emptyState="No hay conductores disponibles"
-                            rowClassName={(row) => 
-                                row.status === "No disponible" ? "opacity-50" : ""
-                            }
-                        />
+                    <div className="grid gap-6 md:grid-cols-2">
+                        {/* Driver Selection */}
+                        <FormField
+                            label="Conductor Asignado"
+                            htmlFor="driverId"
+                        >
+                            <Select
+                                id="driverId"
+                                value={selectedDriverId || ""}
+                                onChange={(e) => setSelectedDriverId(e.target.value ? Number(e.target.value) : undefined)}
+                            >
+                                <option value="">Seleccionar conductor</option>
+                                {availableDrivers.map((driver) => (
+                                    <option key={driver.id} value={driver.id}>
+                                        {driver.User.Name} {driver.User.LastName} - {driver.License}
+                                    </option>
+                                ))}
+                            </Select>
+                        </FormField>
+
+                        {/* Vehicle Selection */}
+                        <FormField
+                            label="Vehículo Asignado"
+                            htmlFor="vehicleId"
+                        >
+                            <Select
+                                id="vehicleId"
+                                value={selectedVehicleId || ""}
+                                onChange={(e) => setSelectedVehicleId(e.target.value ? Number(e.target.value) : undefined)}
+                            >
+                                <option value="">Seleccionar vehículo</option>
+                                {availableVehicles.map((vehicle) => (
+                                    <option key={vehicle.id} value={vehicle.id}>
+                                        {vehicle.Plate} - {vehicle.Brand} {vehicle.Model} ({vehicle.VehicleType})
+                                    </option>
+                                ))}
+                            </Select>
+                        </FormField>
                     </div>
+
+                    {/* Assignment Summary */}
+                    {selectedDriverId && selectedVehicleId && (
+                        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <h4 className="text-sm font-medium text-green-800 mb-2">Resumen de Asignación</h4>
+                            <div className="text-sm text-green-700">
+                                <p><strong>Conductor:</strong> {availableDrivers.find(d => d.id === selectedDriverId)?.User.Name} {availableDrivers.find(d => d.id === selectedDriverId)?.User.LastName}</p>
+                                <p><strong>Vehículo:</strong> {availableVehicles.find(v => v.id === selectedVehicleId)?.Plate} - {availableVehicles.find(v => v.id === selectedVehicleId)?.Brand} {availableVehicles.find(v => v.id === selectedVehicleId)?.Model}</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex justify-end">
                     <Button
                         onClick={handleConfirmAssignment}
-                        disabled={!selectedDriverId}
+                        disabled={!selectedDriverId || !selectedVehicleId}
                         className="min-w-[120px]"
                     >
-                        Confirmar
+                        Confirmar Asignación
                     </Button>
                 </div>
             </div>

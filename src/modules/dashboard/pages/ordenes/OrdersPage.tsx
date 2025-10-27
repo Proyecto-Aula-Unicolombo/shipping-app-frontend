@@ -41,8 +41,8 @@ const SERVICE_TYPE_STYLES: Record<ServiceType, string> = {
 };
 
 const columns: TableColumn<OrderRow>[] = [
-    { 
-        key: "orderNumber", 
+    {
+        key: "orderNumber",
         label: "Orden ID",
         render: (value: unknown, row: OrderRow) => (
             <Link href={`${ROUTES.dashboard.orders}/${row.id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
@@ -70,15 +70,15 @@ const columns: TableColumn<OrderRow>[] = [
             </span>
         ),
     },
-    { 
-        key: "deliveryAddress", 
+    {
+        key: "deliveryAddress",
         label: "Dirección de entrega",
         className: "max-w-xs truncate text-sm"
     },
     { key: "clientName", label: "Cliente", className: "text-sm" },
     { key: "contactPhone", label: "Contacto", className: "text-sm" },
-    { 
-        key: "notes", 
+    {
+        key: "notes",
         label: "Notas",
         className: "max-w-xs truncate text-sm"
     },
@@ -88,12 +88,12 @@ export default function OrdersPage() {
     const [searchValue, setSearchValue] = useState("");
     const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
     const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceType | "all">("all");
-    
+
     const debouncedSearchTerm = useDebounce(searchValue, 300);
-    
+
     const filteredOrders = useMemo(() => {
         let filtered = ordersMock;
-        
+
         // Filter by search term
         const term = debouncedSearchTerm.trim().toLowerCase();
         if (term) {
@@ -107,17 +107,17 @@ export default function OrdersPage() {
                 ].some((field) => field.toLowerCase().includes(term))
             );
         }
-        
+
         // Filter by status
         if (statusFilter !== "all") {
             filtered = filtered.filter((order) => order.Status === statusFilter);
         }
-        
+
         // Filter by service type
         if (serviceTypeFilter !== "all") {
             filtered = filtered.filter((order) => order.ServiceType === serviceTypeFilter);
         }
-        
+
         return filtered;
     }, [debouncedSearchTerm, statusFilter, serviceTypeFilter]);
 
@@ -174,12 +174,13 @@ export default function OrdersPage() {
                             Órdenes sin asignar
                         </Button>
                     </Link>
-                    <Button
-                        variant="secondary"
-                        onClick={() => console.log("Crear orden")}
-                    >
-                        Crear Orden
-                    </Button>
+                    <Link href="/ordenes/crear">
+                        <Button
+                            variant="secondary"
+                        >
+                            Crear Orden
+                        </Button>
+                    </Link>
                 </div>
             </div>
 

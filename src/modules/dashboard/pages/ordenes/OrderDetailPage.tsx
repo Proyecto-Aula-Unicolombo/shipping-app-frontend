@@ -25,8 +25,8 @@ const PACKAGE_STATUS_STYLES: Record<PackageStatus, string> = {
 };
 
 const packageColumns: TableColumn<PackageRow>[] = [
-    { 
-        key: "packageId", 
+    {
+        key: "packageId",
         label: "ID del Paquete",
         render: (value: unknown, row: PackageRow) => (
             <Link href={`/ordenes/paquete/${row.id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
@@ -43,8 +43,8 @@ const packageColumns: TableColumn<PackageRow>[] = [
             </span>
         ),
     },
-    { 
-        key: "deliveryDate", 
+    {
+        key: "deliveryDate",
         label: "Fecha de Entrega"
     },
     {
@@ -61,10 +61,10 @@ const packageColumns: TableColumn<PackageRow>[] = [
 export default function OrderDetailPage() {
     const params = useParams();
     const orderId = parseInt(params.id as string);
-    
+
     const order = useMemo(() => getOrderById(orderId), [orderId]);
     const packages = useMemo(() => getPackagesByOrderId(orderId), [orderId]);
-    
+
     if (!order) {
         return (
             <div className="space-y-8">
@@ -103,11 +103,10 @@ export default function OrderDetailPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Estado</label>
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                            order.Status === "En camino" ? "bg-blue-50 text-blue-700" :
-                            order.Status === "Entregado" ? "bg-emerald-50 text-emerald-700" :
-                            "bg-amber-50 text-amber-600"
-                        }`}>
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${order.Status === "En camino" ? "bg-blue-50 text-blue-700" :
+                                order.Status === "Entregado" ? "bg-emerald-50 text-emerald-700" :
+                                    "bg-amber-50 text-amber-600"
+                            }`}>
                             {order.Status}
                         </span>
                     </div>
@@ -125,9 +124,8 @@ export default function OrderDetailPage() {
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Tipo de Servicio</label>
-                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                            order.ServiceType === "Express Delivery" ? "bg-purple-50 text-purple-700" : "bg-gray-50 text-gray-700"
-                        }`}>
+                        <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${order.ServiceType === "Express Delivery" ? "bg-purple-50 text-purple-700" : "bg-gray-50 text-gray-700"
+                            }`}>
                             {order.ServiceType}
                         </span>
                     </div>
@@ -155,7 +153,7 @@ export default function OrderDetailPage() {
             {/* Packages Section */}
             <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-slate-900">Paquetes</h3>
-                
+
                 <Table
                     columns={packageColumns}
                     data={packageRows}

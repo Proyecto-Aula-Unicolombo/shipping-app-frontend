@@ -5,7 +5,9 @@ export const ROUTES = {
     dashboard: {
         panel: "/panel",
         orders: "/ordenes",
+        createOrder: "/ordenes/crear",
         drivers: "/conductores",
+        vehicles: "/vehiculos",
         incidents: "/incidencias",
         settings: "/configuracion",
     },

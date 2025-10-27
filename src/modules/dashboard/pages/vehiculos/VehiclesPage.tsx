@@ -11,68 +11,55 @@ import { ROUTES } from "@/modules/shared/constants/routes";
 import { SearchInput } from "@/modules/shared/components/SearchInput";
 import { useDebounce } from "@/modules/shared/hooks/useDebounce";
 import { usePagination } from "@/modules/shared/hooks/usePagination";
-import { useDriverQueryStore } from "../../drivers/hooks/useDriverQueryStore";
-import type { DriverListItem } from "@/mocks/drivers";
+import { useVehicleQueryStore } from "../../vehicles/hooks/useVehicleQueryStore";
 
-type DriverStatus = DriverListItem["status"];
-type DriverRow = Record<string, unknown> & {
+type VehicleRow = Record<string, unknown> & {
     id: number;
-    name: string;
-    lastName: string;
-    lastOrderNumber: string;
-    status: DriverStatus;
+    plate: string;
+    brand: string;
+    model: string;
+    vehicleType: string;
+    color: string;
     actions?: null;
 };
 
-const STATUS_STYLES: Record<DriverStatus, string> = {
-    Activo: "bg-emerald-50 text-emerald-700",
-    Inactivo: "bg-amber-50 text-amber-600",
-};
-
-const columns: TableColumn<DriverRow>[] = [
-    { key: "name", label: "Nombre" },
-    { key: "lastName", label: "Apellido" },
-    { key: "lastOrderNumber", label: "Número de orden" },
-    {
-        key: "status",
-        label: "Estado",
-        render: (value) => (
-            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[value as DriverStatus]}`}>
-                {value as string}
-            </span>
-        ),
-    },
+const columns: TableColumn<VehicleRow>[] = [
+    { key: "plate", label: "Placa" },
+    { key: "brand", label: "Marca" },
+    { key: "model", label: "Modelo" },
+    { key: "vehicleType", label: "Tipo" },
+    { key: "color", label: "Color" },
     {
         key: "actions",
         label: "Acciones",
         render: (_, row) => (
-            <Link href={`${ROUTES.dashboard.drivers}/${row.id}`} className="text-sm font-semibold text-[#4D7399] hover:underline">
+            <Link href={`${ROUTES.dashboard.vehicles}/${row.id}`} className="text-sm font-semibold text-[#4D7399] hover:underline">
                 Ver detalles
             </Link>
         ),
     },
 ];
 
-export default function DriversPage() {
+export default function VehiclesPage() {
     const router = useRouter();
     const [searchValue, setSearchValue] = useState("");
     const debouncedSearchTerm = useDebounce(searchValue, 300);
     
-    // Use React Query store for drivers data
-    const { drivers, isLoading, isError, error } = useDriverQueryStore();
+    // Use React Query store for vehicles data
+    const { vehicles, isLoading, isError, error } = useVehicleQueryStore();
     
-    const filteredDrivers = useMemo(() => {
+    const filteredVehicles = useMemo(() => {
         const term = debouncedSearchTerm.trim().toLowerCase();
         if (!term) {
-            return drivers;
+            return vehicles;
         }
 
-        return drivers.filter((driver) =>
-            [driver.User.Name, driver.User.LastName, driver.lastOrderNumber].some((field) =>
+        return vehicles.filter((vehicle) =>
+            [vehicle.Plate, vehicle.Brand, vehicle.Model, vehicle.VehicleType, vehicle.Color].some((field) =>
                 field.toLowerCase().includes(term)
             )
         );
-    }, [debouncedSearchTerm, drivers]);
+    }, [debouncedSearchTerm, vehicles]);
 
     const {
         page,
@@ -82,15 +69,16 @@ export default function DriversPage() {
         setPageSize,
         totalItems,
         resetPage,
-    } = usePagination<5 | 10 | 15>({ totalItems: filteredDrivers.length, initialPageSize: 5 });
+    } = usePagination<5 | 10 | 15>({ totalItems: filteredVehicles.length, initialPageSize: 5 });
 
-    const paginatedDrivers = filteredDrivers.slice(offset, offset + pageSize);
-    const tableRows = paginatedDrivers.map<DriverRow>((driver) => ({
-        id: driver.id,
-        name: driver.User.Name,
-        lastName: driver.User.LastName,
-        lastOrderNumber: driver.lastOrderNumber,
-        status: driver.status,
+    const paginatedVehicles = filteredVehicles.slice(offset, offset + pageSize);
+    const tableRows = paginatedVehicles.map<VehicleRow>((vehicle) => ({
+        id: vehicle.id,
+        plate: vehicle.Plate,
+        brand: vehicle.Brand,
+        model: vehicle.Model,
+        vehicleType: vehicle.VehicleType,
+        color: vehicle.Color,
         actions: null,
     }));
 
@@ -103,9 +91,9 @@ export default function DriversPage() {
     if (isLoading) {
         return (
             <div className="space-y-8">
-                <PageHeader eyebrow="Conductores" title="Conductores" />
+                <PageHeader eyebrow="Vehículos" title="Vehículos" />
                 <div className="flex items-center justify-center py-12">
-                    <div className="text-slate-500">Cargando conductores...</div>
+                    <div className="text-slate-500">Cargando vehículos...</div>
                 </div>
             </div>
         );
@@ -114,10 +102,10 @@ export default function DriversPage() {
     if (isError) {
         return (
             <div className="space-y-8">
-                <PageHeader eyebrow="Conductores" title="Conductores" />
+                <PageHeader eyebrow="Vehículos" title="Vehículos" />
                 <div className="flex items-center justify-center py-12">
                     <div className="text-red-500">
-                        Error al cargar conductores: {error?.message || "Error desconocido"}
+                        Error al cargar vehículos: {error?.message || "Error desconocido"}
                     </div>
                 </div>
             </div>
@@ -127,13 +115,13 @@ export default function DriversPage() {
     return (
         <div className="space-y-8">
             <div className="flex items-center justify-between gap-4">
-                <PageHeader eyebrow="Conductores" title="Conductores" />
+                <PageHeader eyebrow="Vehículos" title="Vehículos" />
                 <Button
                     className=""
                     variant="secondary"
-                    onClick={() => router.push(`${ROUTES.dashboard.drivers}/crear`)}
+                    onClick={() => router.push(`${ROUTES.dashboard.vehicles}/crear`)}
                 >
-                    Crear Conductor
+                    Crear Vehículo
                 </Button>
             </div>
 
@@ -141,14 +129,14 @@ export default function DriversPage() {
                 <SearchInput
                     value={searchValue}
                     onChange={handleSearchChange}
-                    placeholder="Buscar por nombre, apellido o número de orden"
+                    placeholder="Buscar por placa, marca, modelo o tipo"
                 />
 
                 <Table
                     columns={columns}
                     data={tableRows}
                     getRowKey={(row) => row.id}
-                    emptyState="No se encontraron conductores"
+                    emptyState="No se encontraron vehículos"
                 />
 
                 <TablePagination
