@@ -17,6 +17,10 @@ export const ROUTES = {
         users: "/configuracion/usuarios",
         createUser: "/configuracion/usuarios/crear",
         editUser: (id: number) => `/configuracion/usuarios/${id}/editar`,
+    },
+    client: {
+        tracking: "/seguimiento",
+        trackOrder: (orderNumber: string) => `/seguimiento/${orderNumber}`,
     }
 } as const;
 

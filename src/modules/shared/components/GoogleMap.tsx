@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback } from "react";
-import { GoogleMap as ReactGoogleMap, LoadScript, Marker } from "@react-google-maps/api";
+import { useCallback, useState } from "react";
+import { GoogleMap as ReactGoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
 
 interface GoogleMapProps {
     center?: { lat: number; lng: number };
@@ -42,51 +42,70 @@ export function GoogleMap({
     onMapLoad,
     markers = []
 }: GoogleMapProps) {
+    const { isLoaded, loadError } = useJsApiLoader({
+        id: 'google-map-script',
+        googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "",
+        libraries: ["places"]
+    });
+
+    const [map, setMap] = useState<google.maps.Map | null>(null);
+
     const onLoad = useCallback((map: google.maps.Map) => {
+        setMap(map);
         onMapLoad?.(map);
     }, [onMapLoad]);
 
     const onUnmount = useCallback(() => {
-        // Cleanup if needed
+        setMap(null);
     }, []);
+
+    if (loadError) {
+        return (
+            <div className={className}>
+                <div className="w-full h-full bg-red-50 rounded-lg flex items-center justify-center">
+                    <div className="text-red-600">Error al cargar el mapa</div>
+                </div>
+            </div>
+        );
+    }
+
+    if (!isLoaded) {
+        return (
+            <div className={className}>
+                <div className="w-full h-full bg-slate-100 rounded-lg flex items-center justify-center">
+                    <div className="text-slate-500">Cargando mapa...</div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={className}>
-            <LoadScript
-                googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ""}
-                libraries={["places"]}
-                loadingElement={
-                    <div className="w-full h-full bg-slate-100 rounded-lg flex items-center justify-center">
-                        <div className="text-slate-500">Cargando mapa...</div>
-                    </div>
-                }
+            <ReactGoogleMap
+                mapContainerStyle={mapContainerStyle}
+                center={center}
+                zoom={zoom}
+                onLoad={onLoad}
+                onUnmount={onUnmount}
+                options={mapOptions}
             >
-                <ReactGoogleMap
-                    mapContainerStyle={mapContainerStyle}
-                    center={center}
-                    zoom={zoom}
-                    onLoad={onLoad}
-                    onUnmount={onUnmount}
-                    options={mapOptions}
-                >
-                    {markers.map((marker) => (
-                        <Marker
-                            key={marker.id}
-                            position={marker.position}
-                            title={marker.title}
-                            icon={marker.icon ? {
-                                url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-                                        <text x="16" y="24" text-anchor="middle" font-size="20">${marker.icon}</text>
-                                    </svg>
-                                `)}`,
-                                scaledSize: new window.google.maps.Size(32, 32)
-                            } : undefined}
-                            onClick={marker.onClick}
-                        />
-                    ))}
-                </ReactGoogleMap>
-            </LoadScript>
+                {markers.map((marker) => (
+                    <Marker
+                        key={marker.id}
+                        position={marker.position}
+                        title={marker.title}
+                        icon={marker.icon && typeof window !== 'undefined' && window.google?.maps ? {
+                            url: `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(`
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+                                    <text x="16" y="24" text-anchor="middle" font-size="20">${marker.icon}</text>
+                                </svg>
+                            `)}`,
+                            scaledSize: new window.google.maps.Size(32, 32)
+                        } : undefined}
+                        onClick={marker.onClick}
+                    />
+                ))}
+            </ReactGoogleMap>
         </div>
     );
 }
