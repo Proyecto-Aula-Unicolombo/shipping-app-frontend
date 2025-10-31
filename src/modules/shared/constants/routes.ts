@@ -21,6 +21,13 @@ export const ROUTES = {
     client: {
         tracking: "/seguimiento",
         trackOrder: (orderNumber: string) => `/seguimiento/${orderNumber}`,
+    },
+    driver: {
+        orders: "/conductor/ordenes",
+        orderDetail: (orderId: number) => `/conductor/ordenes/${orderId}`,
+        packages: "/conductor/paquetes",
+        history: "/conductor/historial",
+        profile: "/conductor/perfil",
     }
 } as const;
 

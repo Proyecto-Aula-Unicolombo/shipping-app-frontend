@@ -22,7 +22,14 @@ export function LoginForm() {
     async (data: LoginSchema) => {
       await new Promise((resolve) => setTimeout(resolve, 750));
       console.log("Login submitted", data);
-      router.push(ROUTES.dashboard.panel);
+      
+      // Mock authentication - in real app this would come from API
+      // For demo purposes, redirect based on email
+      if (data.email.includes("conductor") || data.email.includes("driver")) {
+        router.push(ROUTES.driver.orders);
+      } else {
+        router.push(ROUTES.dashboard.panel);
+      }
     },
     [router]
   );
