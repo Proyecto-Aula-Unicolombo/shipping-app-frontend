@@ -2,7 +2,6 @@ import { ActionCard } from "@/modules/shared/components/ActionCard";
 import { PageHeader } from "@/modules/dashboard/components/PageHeader";
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { PiUsersThreeLight } from "react-icons/pi";
-import { FiLogOut } from "react-icons/fi";
 
 export function ConfigurationPage() {
     return (
@@ -17,15 +16,6 @@ export function ConfigurationPage() {
                     tone="primary"
                     actionLabel="Administrar usuarios"
                     href={ROUTES.settings.users}
-                />
-
-                <ActionCard
-                    title="Cerrar Sesión"
-                    description="Cierra la sesión actual y vuelve al inicio de sesión."
-                    icon={<FiLogOut size={24} />}
-                    tone="danger"
-                    actionLabel="Finalizar sesión"
-                    href={ROUTES.auth.login}
                 />
             </div>
         </div>
