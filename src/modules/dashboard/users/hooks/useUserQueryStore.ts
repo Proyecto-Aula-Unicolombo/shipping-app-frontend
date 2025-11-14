@@ -1,10 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useUserStore } from "../stores/userStore";
 import type { CreateUserSchema } from "../schemas/createUser.schema";
-import type { UserListItem, UsersListAPIResponse } from "@/types/users";
+import type { UserDetail, UserListItem, UsersListAPIResponse } from "@/types/users";
 import { UserListParams, usersRepository } from "../repository/usersRepository";
 
 const USERS_QUERY_KEY = ["users"] as const;
+const USER_DETAIL_QUERY_KEY = (id: number) => ["users", id] as const;
+
+interface UseUserQueryStoreOptions {
+    listParams?: UserListParams;
+    userId?: number | null;
+}
 
 const transformAPIUser = (apiUser: any): UserListItem => {
     return {
@@ -16,6 +21,12 @@ const transformAPIUser = (apiUser: any): UserListItem => {
         status: "Activo",
     };
 };
+
+const fetchUserById = async (id: number): Promise<UserDetail> => {
+    const res = await usersRepository.get(String(id));
+    return res as UserDetail;
+};
+
 // API-backed functions
 const fetchUsers = async (params?: UserListParams): Promise<UsersListAPIResponse> => {
     const res = await usersRepository.list(params);
@@ -49,21 +60,29 @@ const updateUserStatusAPI = async (params: { id: number; status: "Activo" | "Ina
     return { id: params.id, status: params.status };
 };
 
-export function useUserQueryStore(params?: UserListParams) {
+export function useUserQueryStore(options?: UseUserQueryStoreOptions) {
+    const { listParams, userId } = options || {};
     const queryClient = useQueryClient();
 
     // Query for fetching users list
     const usersQuery = useQuery({
-        queryKey: [USERS_QUERY_KEY, params],
-        queryFn: () => fetchUsers(params),
+        queryKey: [USERS_QUERY_KEY, listParams],
+        queryFn: () => fetchUsers(listParams),
         staleTime: 5 * 60 * 1000, // 5 minutes
         placeholderData: (previousData) => previousData
+    });
+
+    const userDetailQuery = useQuery({
+        queryKey: USER_DETAIL_QUERY_KEY(userId!),
+        queryFn: () => fetchUserById(userId!),
+        enabled: userId !== null && userId !== undefined && userId > 0,
+        staleTime: 5 * 60 * 1000,
     });
 
     // Mutation for creating a new user
     const createUserMutation = useMutation({
         mutationFn: createUserAPI,
-        onSuccess: (newUser) => {
+        onSuccess: () => {
             // Update the query cache with the new user
             // queryClient.setQueryData(USERS_QUERY_KEY, (oldData: UserListItem[] | undefined) => {
             //     if (!oldData) return [newUser];
@@ -113,7 +132,7 @@ export function useUserQueryStore(params?: UserListParams) {
     });
 
     return {
-        // Query data
+        // List query data
         users: usersQuery.data?.items || [],
         totalItems: usersQuery.data?.total_items || 0,
         totalPages: usersQuery.data?.total_pages || 1,
@@ -122,6 +141,13 @@ export function useUserQueryStore(params?: UserListParams) {
         isError: usersQuery.isError,
         error: usersQuery.error,
 
+        // Detail query data
+        userDetail: userDetailQuery.data,
+        isLoadingDetail: userDetailQuery.isLoading,
+        isErrorDetail: userDetailQuery.isError,
+        errorDetail: userDetailQuery.error,
+
+        
         // Mutation data
         createUser: createUserMutation.mutate,
         createUserAsync: createUserMutation.mutateAsync,

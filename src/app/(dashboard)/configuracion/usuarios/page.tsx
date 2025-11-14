@@ -53,10 +53,12 @@ export default function UsersPage() {
         isLoading,
         isError,
     } = useUserQueryStore({
-        limit: pageSize,
-        page: page,
-        name_or_last_name: debouncedSearchTerm,
-        role: roleFilter,
+        listParams: {
+            limit: pageSize,
+            page: page,
+            name_or_last_name: debouncedSearchTerm,
+            role: roleFilter,
+        }
     });
 
     const stats = {

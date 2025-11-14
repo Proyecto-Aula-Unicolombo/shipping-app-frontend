@@ -17,15 +17,14 @@ export interface User {
     Email: string;
     Password?: string;
     Role: string;
+    Driver?: Driver;
 }
 
 export interface Driver {
     id: number;
-    PhoneNumber: string;
-    License: string;
-    UserID: number;
-    User: User;
-    Vehicle?: Vehicle; // Optional relationship with Vehicle
+    phone_number: string;
+    num_licence: string;
+    UserID?: number;
 }
 
 export interface Vehicle {

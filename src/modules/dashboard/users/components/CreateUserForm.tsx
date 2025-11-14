@@ -12,7 +12,7 @@ import { createUserSchema, createUserDefaultValues, type CreateUserSchema } from
 import { useUserQueryStore } from "../hooks/useUserQueryStore";
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import type { UserListItem, UserRole } from "@/types/users";
+import type { UserListItem } from "@/types/users";
 
 interface UserFormProps {
     user?: UserListItem;
@@ -37,8 +37,8 @@ export function UserForm({ user, mode }: UserFormProps) {
                 password: "", // Always empty for security
                 confirmPassword: "",
                 role: user.Role as 'coord' | 'driver' | 'admin',
-                phoneNumber: "", // Would need to get from driver data if conductor
-                license: "", // Would need to get from driver data if conductor
+                phoneNumber: user.Driver?.phone_number, // Would need to get from driver data if conductor
+                license: user.Driver?.num_licence, // Would need to get from driver data if conductor
             };
         }
         return createUserDefaultValues;

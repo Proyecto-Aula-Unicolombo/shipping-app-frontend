@@ -1,19 +1,31 @@
 
-import type { User } from "./domain";
 
 export type UserRole = "admin" | "coord" | "driver";
 export type PublicUserRole = "coordinador" | "conductor" | "administrador";
 
 export type UserStatus = "Activo" | "Inactivo" | "Suspendido";
 
-export interface UserListItem extends User {
+export interface UserListItem {
+    ID: number;
+    Name: string;
+    LastName: string;
+    Email: string;
+    Password?: string;
+    Role: UserRole;
     status: UserStatus;
     lastLogin?: string;
     avatar?: string;
+    Driver?: DriverInfo;   
 }
 
 export type UserDetail = UserListItem;
 
+interface DriverInfo {
+    id: number;
+    phone_number: string;
+    num_licence: string;
+
+}
 export interface UserAPIResponse {
     ID: number;
     Name: string;
