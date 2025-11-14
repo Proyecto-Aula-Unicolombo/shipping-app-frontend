@@ -12,7 +12,7 @@ import { createUserSchema, createUserDefaultValues, type CreateUserSchema } from
 import { useUserQueryStore } from "../hooks/useUserQueryStore";
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { FiEye, FiEyeOff } from "react-icons/fi";
-import type { UserListItem } from "@/mocks/users";
+import type { UserListItem, UserRole } from "@/types/users";
 
 interface UserFormProps {
     user?: UserListItem;
@@ -36,7 +36,7 @@ export function UserForm({ user, mode }: UserFormProps) {
                 email: user.Email,
                 password: "", // Always empty for security
                 confirmPassword: "",
-                role: user.Role as "coordinador" | "conductor" | "remitente",
+                role: user.Role as 'coord' | 'driver' | 'admin',
                 phoneNumber: "", // Would need to get from driver data if conductor
                 license: "", // Would need to get from driver data if conductor
             };
@@ -61,7 +61,7 @@ export function UserForm({ user, mode }: UserFormProps) {
         try {
             if (isEditMode && user) {
                 // TODO: Implement updateUserAsync when needed
-                console.log("Edit mode - would update user:", user.id, data);
+                console.log("Edit mode - would update user:", user.ID, data);
                 // For now, just navigate back
                 router.push(ROUTES.settings.users);
             } else {
@@ -75,9 +75,9 @@ export function UserForm({ user, mode }: UserFormProps) {
     };
 
     const roleOptions = [
-        { value: "coordinador", label: "Coordinador" },
-        { value: "conductor", label: "Conductor" },
-        { value: "remitente", label: "Remitente" },
+        { value: "coord", label: "Coordinador" },
+        { value: "driver", label: "Conductor" },
+        { value: "admin", label: "Administrador" },
     ];
 
     return (
@@ -178,7 +178,7 @@ export function UserForm({ user, mode }: UserFormProps) {
                     </FormField>
 
                     {/* Campos específicos para conductores */}
-                    {selectedRole === "conductor" && (
+                    {selectedRole === "driver" && (
                         <>
                             <FormField label="Número de Teléfono *" htmlFor="phoneNumber" error={errors.phoneNumber?.message}>
                                 <Input
@@ -208,14 +208,11 @@ export function UserForm({ user, mode }: UserFormProps) {
             <div className="bg-slate-50 rounded-lg p-4">
                 <h4 className="text-sm font-medium text-slate-900 mb-2">Información del Rol</h4>
                 <div className="text-sm text-slate-600">
-                    {selectedRole === "coordinador" && (
+                    {selectedRole === "coord" && (
                         <p>Los coordinadores pueden gestionar órdenes, asignar conductores y supervisar operaciones.</p>
                     )}
-                    {selectedRole === "conductor" && (
+                    {selectedRole === "driver" && (
                         <p>Los conductores pueden ver sus órdenes asignadas, actualizar estados de entrega y reportar incidencias.</p>
-                    )}
-                    {selectedRole === "remitente" && (
-                        <p>Los remitentes pueden crear nuevas órdenes de entrega y hacer seguimiento a sus envíos.</p>
                     )}
                 </div>
             </div>

@@ -9,6 +9,7 @@ type TablePaginationProps<T extends number = typeof DEFAULT_PAGE_SIZE_OPTIONS[nu
     page: number;
     pageSize: T;
     totalItems: number;
+    totalPages?: number;
     onPageChange: (page: number) => void;
     onPageSizeChange: (size: T) => void;
     pageSizeOptions?: readonly T[];
@@ -19,6 +20,7 @@ export function TablePagination<T extends number = typeof DEFAULT_PAGE_SIZE_OPTI
     page,
     pageSize,
     totalItems,
+    totalPages: externalTotalPages,
     onPageChange,
     onPageSizeChange,
     pageSizeOptions,
@@ -26,7 +28,7 @@ export function TablePagination<T extends number = typeof DEFAULT_PAGE_SIZE_OPTI
 }: TablePaginationProps<T>) {
     const pageSizeSelectId = useId();
     const options = (pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS) as readonly T[];
-    const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+    const totalPages = externalTotalPages ?? Math.max(1, Math.ceil(totalItems / pageSize));
 
     const handlePrevious = () => {
         onPageChange(Math.max(1, page - 1));

@@ -7,7 +7,7 @@ export const createUserSchema = z.object({
     email: z.string().email("Ingresa un email válido."),
     password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
     confirmPassword: z.string().min(1, "Confirma la contraseña."),
-    role: z.enum(["coordinador", "conductor", "remitente"], {
+    role: z.enum(["coord", "driver", "admin"], {
         message: "Selecciona un rol válido."
     }),
     
@@ -19,7 +19,7 @@ export const createUserSchema = z.object({
     path: ["confirmPassword"],
 }).refine((data) => {
     // If role is conductor, phoneNumber and license are required
-    if (data.role === "conductor") {
+    if (data.role === "driver") {
         return data.phoneNumber && data.phoneNumber.length > 0 && data.license && data.license.length > 0;
     }
     return true;
@@ -36,7 +36,7 @@ export const createUserDefaultValues: CreateUserSchema = {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "coordinador",
+    role: "coord",
     phoneNumber: "",
     license: "",
 };

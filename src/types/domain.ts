@@ -11,11 +11,11 @@ export interface GeomPoint {
 // --- Entidades Principales ---
 
 export interface User {
-    id: number;
+    ID: number;
     Name: string;
     LastName: string;
     Email: string;
-    Password: string;
+    Password?: string;
     Role: string;
 }
 
