@@ -79,6 +79,11 @@ const updateUserAPI = async (pyl: UpdateUserPayload): Promise<UserListItem> => {
     return (resp as unknown) as UserListItem;
 };
 
+
+const deleteUserAPI = async (id: number): Promise<void> => {
+    await usersRepository.remove(String(id));
+};
+
 export function useUserQueryStore(options?: UseUserQueryStoreOptions) {
     const { listParams, userId } = options || {};
     const queryClient = useQueryClient();
@@ -140,6 +145,24 @@ export function useUserQueryStore(options?: UseUserQueryStoreOptions) {
         },
     });
 
+
+    const deleteUserMutation = useMutation({
+        mutationFn: deleteUserAPI,
+        onSuccess: (_, id) => {
+            queryClient.invalidateQueries({
+                queryKey: [USERS_QUERY_KEY],
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: USER_DETAIL_QUERY_KEY(id),
+            });
+        },
+        onError: (error) => {
+            console.error("Error deleting user:", error);
+            throw error;
+        },
+    });
+
     return {
         // List query data
         users: usersQuery.data?.items || [],
@@ -163,12 +186,18 @@ export function useUserQueryStore(options?: UseUserQueryStoreOptions) {
         isCreating: createUserMutation.isPending,
         createError: createUserMutation.error,
 
-        // Status update mutation data
+        // update mutation data
         updateUser: updateUserStatusMutation.mutate,
         updateUserAsync: updateUserStatusMutation.mutateAsync,
         isUpdating: updateUserStatusMutation.isPending,
         updateError: updateUserStatusMutation.error,
 
+        // delete mutation data
+        deleteUser: deleteUserMutation.mutate,
+        deleteUserAsync: deleteUserMutation.mutateAsync,
+        isDeleting: deleteUserMutation.isPending,
+        deleteError: deleteUserMutation.error,
+        
         // Utility functions
         refetch: usersQuery.refetch,
         invalidate: () => queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY }),
