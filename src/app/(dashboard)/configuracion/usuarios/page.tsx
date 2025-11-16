@@ -42,6 +42,7 @@ export default function UsersPage() {
     const [roleFilter, setRoleFilter] = useState<"all" | UserRole>("all");
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<5 | 10 | 15>(5);
+    const {deleteUserAsync, isDeleting} = useUserQueryStore();
 
     const debouncedSearchTerm = useDebounce(searchValue, 300);
 
@@ -69,6 +70,16 @@ export default function UsersPage() {
             administrador: users.filter((u) => u.Role === "admin").length,
         }
     }
+
+    const onDeleteUser = async (userId: number) => {
+        if (confirm("¿Estás seguro de que deseas eliminar este usuario?")) {
+            try {
+                await deleteUserAsync(userId);
+            } catch (error) {
+                console.error("Error deleting user:", error);
+            }
+        }
+    };
 
     // Define columns inside component to access router
     const columns: TableColumn<UserRow>[] = [
@@ -115,6 +126,7 @@ export default function UsersPage() {
                     <button
                         className="p-1 cursor-pointer text-slate-400 hover:text-red-600 transition-colors"
                         title="Eliminar usuario"
+                        onClick={() => onDeleteUser(row.id)}
                     >
                         <FiTrash2 size={16} />
                     </button>
