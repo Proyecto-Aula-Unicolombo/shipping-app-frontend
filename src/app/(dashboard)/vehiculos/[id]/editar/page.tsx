@@ -6,8 +6,9 @@ interface EditVehicleRouteProps {
     };
 }
 
-export default function EditVehicleRoute({ params }: EditVehicleRouteProps) {
-    const vehicleId = parseInt(params.id, 10);
+export default async function EditVehicleRoute({ params }: EditVehicleRouteProps) {
+    const {id} = await params;
+    const vehicleId = parseInt(id, 10);
     
     if (isNaN(vehicleId)) {
         return (

@@ -28,7 +28,7 @@ export interface Driver {
 }
 
 export interface Vehicle {
-    id: number;
+    ID: number;
     Plate: string;
     Brand: string;
     Model: string;

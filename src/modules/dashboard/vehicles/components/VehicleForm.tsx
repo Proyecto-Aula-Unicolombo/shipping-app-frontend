@@ -19,7 +19,7 @@ interface VehicleFormProps {
 
 export function VehicleForm({ vehicle, mode }: VehicleFormProps) {
     const router = useRouter();
-    const { createVehicleAsync, isCreating } = useVehicleQueryStore();
+    const { createVehicleAsync, isCreating, updateVehicleAsync, isUpdating } = useVehicleQueryStore();
 
     const isEditMode = mode === "edit";
 
@@ -50,9 +50,8 @@ export function VehicleForm({ vehicle, mode }: VehicleFormProps) {
     const onSubmit = async (data: CreateVehicleSchema) => {
         try {
             if (isEditMode && vehicle) {
-                // TODO: Implement updateVehicleAsync when needed
-                console.log("Edit mode - would update vehicle:", vehicle.id, data);
-                // For now, just navigate back
+                await updateVehicleAsync({ id: vehicle.ID, data });
+                reset();
                 router.push(ROUTES.dashboard.vehicles);
             } else {
                 await createVehicleAsync(data);
@@ -158,7 +157,7 @@ export function VehicleForm({ vehicle, mode }: VehicleFormProps) {
                     disabled={isCreating}
                     className="min-w-[120px]"
                 >
-                    {isCreating ? (isEditMode ? "Actualizando..." : "Creando...") : (isEditMode ? "Actualizar Vehículo" : "Crear Vehículo")}
+                    {isCreating || isUpdating ? (isEditMode ? "Actualizando..." : "Creando...") : (isEditMode ? "Actualizar Vehículo" : "Crear Vehículo")}
                 </Button>
             </div>
         </form>

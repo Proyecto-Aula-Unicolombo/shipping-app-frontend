@@ -1,10 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CreateVehicleSchema } from "../schemas/createVehicle.schema";
-import { VehicleListItem, VehicleListAPIResponse } from "@/types/vehicles";
+import { VehicleListItem, VehicleListAPIResponse, VehicleDetail } from "@/types/vehicles";
 import { vehiclesRepository, VehicleListParams } from "../repository/vehicleRepository";
 
 const VEHICLES_QUERY_KEY = ["vehicles"] as const;
-// const VEHICLE_DETAIL_QUERY_KEY = (id: number) => ["vehicles", id] as const;
+const VEHICLE_DETAIL_QUERY_KEY = (id: number) => ["vehicles", id] as const;
 
 
 interface UseVehicleQueryStoreOptions {
@@ -12,11 +12,20 @@ interface UseVehicleQueryStoreOptions {
     vehicleId?: number | null;
 }
 
+interface UpdateVehiclePayload {
+    id: number;
+    data: CreateVehicleSchema;
+}
 
 
 const fetchVehicles = async (params?: VehicleListParams): Promise<VehicleListAPIResponse> => {
     const resp = await vehiclesRepository.list(params);
     return resp;
+};
+
+const fetchVehicleById = async (id: number): Promise<VehicleDetail> => {
+    const res = await vehiclesRepository.get(String(id));
+    return res as VehicleDetail;
 };
 
 const createVehicleAPI = async (data: CreateVehicleSchema): Promise<VehicleListItem> => {
@@ -33,6 +42,11 @@ const createVehicleAPI = async (data: CreateVehicleSchema): Promise<VehicleListI
     return (resp as unknown) as VehicleListItem;
 };
 
+const updateVehicleAPI = async (payload: UpdateVehiclePayload): Promise<VehicleListItem> => {
+    const response = await vehiclesRepository.update(String(payload.id), payload.data);
+    return response as VehicleListItem;
+}
+
 
 export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
     const { listParams, vehicleId } = options || {};
@@ -44,6 +58,13 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         staleTime: 5 * 60 * 1000, // 5 minutes
         placeholderData: (previousData) => previousData
 
+    });
+
+    const vehicleDetailQuery = useQuery({
+        queryKey: VEHICLE_DETAIL_QUERY_KEY(vehicleId!),
+        queryFn: () => fetchVehicleById(vehicleId!),
+        enabled: vehicleId !== null && vehicleId !== undefined && vehicleId > 0,
+        staleTime: 5 * 60 * 1000,
     });
 
     // Mutation for creating a new vehicle
@@ -59,6 +80,22 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         },
     });
 
+    const updateVehicleMutation = useMutation({
+        mutationFn: updateVehicleAPI,
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: [VEHICLES_QUERY_KEY],
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: VEHICLE_DETAIL_QUERY_KEY(vehicleId!),
+            });
+        },
+        onError: (error) => {
+            console.error("Error updating vehicle:", error);
+        },
+    });
+
     return {
         // Query data
         vehicles: vehiclesQuery.data?.items || [],
@@ -69,11 +106,23 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         isError: vehiclesQuery.isError,
         error: vehiclesQuery.error,
 
+        // detail data
+        vehicleDetail: vehicleDetailQuery.data,
+        isDetailLoading: vehicleDetailQuery.isLoading,
+        isDetailError: vehicleDetailQuery.isError,
+        detailError: vehicleDetailQuery.error,
+
         // Mutation data
         createVehicle: createVehicleMutation.mutate,
         createVehicleAsync: createVehicleMutation.mutateAsync,
         isCreating: createVehicleMutation.isPending,
         createError: createVehicleMutation.error,
+
+        // Update mutation data
+        updateVehicle: updateVehicleMutation.mutate,
+        updateVehicleAsync: updateVehicleMutation.mutateAsync,
+        isUpdating: updateVehicleMutation.isPending,
+        updateError: updateVehicleMutation.error,
 
         // Utility functions
         refetch: vehiclesQuery.refetch,
