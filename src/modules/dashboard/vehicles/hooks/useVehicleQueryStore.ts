@@ -75,7 +75,7 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         mutationFn: createVehicleAPI,
         onSuccess: () => {
             queryClient.invalidateQueries({
-                queryKey: VEHICLES_QUERY_KEY,
+                queryKey: [VEHICLES_QUERY_KEY],
             });
         },
         onError: (error) => {
@@ -104,6 +104,10 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         onSuccess: () => {
             queryClient.invalidateQueries({
                 queryKey: [VEHICLES_QUERY_KEY],
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: VEHICLE_DETAIL_QUERY_KEY(vehicleId!),
             });
         },
         onError: (error) => {
@@ -144,7 +148,7 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         deleteVehicleAsync: deleteVehicleMutation.mutateAsync,
         isDeleting: deleteVehicleMutation.isPending,
         deleteError: deleteVehicleMutation.error,
-        
+
         // Utility functions
         refetch: vehiclesQuery.refetch,
         invalidate: () => queryClient.invalidateQueries({ queryKey: VEHICLES_QUERY_KEY }),
