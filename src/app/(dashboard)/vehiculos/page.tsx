@@ -51,6 +51,7 @@ export default function VehiclesPage() {
         totalPages,
         isLoading,
         isError,
+        deleteVehicleAsync
     } = useVehicleQueryStore({
         listParams: {
             limit: pageSize,
@@ -102,6 +103,16 @@ export default function VehiclesPage() {
     const handleTypeFilterChange = (type: string) => {
         setTypeFilter(type as typeof typeFilter);
         setPage(1);
+    };
+
+    const handleDeleteVehicle = async (vehicleId: number) => {
+        if (confirm("¿Estás seguro de que deseas eliminar este vehículo?")) {
+            try {
+                await deleteVehicleAsync(vehicleId);
+            } catch (error) {
+                console.error("Error deleting vehicle:", error);
+            }
+        }
     };
 
 
@@ -161,6 +172,7 @@ export default function VehiclesPage() {
                     <button
                         className="p-1 cursor-pointer text-slate-400 hover:text-red-600 transition-colors"
                         title="Eliminar vehículo"
+                        onClick={() => handleDeleteVehicle(row.id)}
                     >
                         <FiTrash2 size={16} />
                     </button>

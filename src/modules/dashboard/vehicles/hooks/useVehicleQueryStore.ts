@@ -47,6 +47,9 @@ const updateVehicleAPI = async (payload: UpdateVehiclePayload): Promise<VehicleL
     return response as VehicleListItem;
 }
 
+const deleteVehicleAPI = async (id: number): Promise<void> => {
+    await vehiclesRepository.remove(String(id));
+};
 
 export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
     const { listParams, vehicleId } = options || {};
@@ -96,6 +99,18 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         },
     });
 
+    const deleteVehicleMutation = useMutation({
+        mutationFn: deleteVehicleAPI,
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: [VEHICLES_QUERY_KEY],
+            });
+        },
+        onError: (error) => {
+            console.error("Error deleting vehicle:", error);
+        },
+    });
+
     return {
         // Query data
         vehicles: vehiclesQuery.data?.items || [],
@@ -124,6 +139,12 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         isUpdating: updateVehicleMutation.isPending,
         updateError: updateVehicleMutation.error,
 
+        // Delete mutation data
+        deleteVehicle: deleteVehicleMutation.mutate,
+        deleteVehicleAsync: deleteVehicleMutation.mutateAsync,
+        isDeleting: deleteVehicleMutation.isPending,
+        deleteError: deleteVehicleMutation.error,
+        
         // Utility functions
         refetch: vehiclesQuery.refetch,
         invalidate: () => queryClient.invalidateQueries({ queryKey: VEHICLES_QUERY_KEY }),
