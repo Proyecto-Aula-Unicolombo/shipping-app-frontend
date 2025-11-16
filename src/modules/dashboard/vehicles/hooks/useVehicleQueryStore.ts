@@ -1,48 +1,58 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useVehicleStore } from "../stores/vehicleStore";
 import type { CreateVehicleSchema } from "../schemas/createVehicle.schema";
-import type { VehicleListItem } from "@/mocks/vehicles";
+import { VehicleListItem, VehicleListAPIResponse } from "@/types/vehicles";
+import { vehiclesRepository, VehicleListParams } from "../repository/vehicleRepository";
 
 const VEHICLES_QUERY_KEY = ["vehicles"] as const;
+// const VEHICLE_DETAIL_QUERY_KEY = (id: number) => ["vehicles", id] as const;
 
-// Simulate API functions
-const fetchVehicles = async (): Promise<VehicleListItem[]> => {
-    // In a real app, this would be an API call
-    await new Promise((resolve) => setTimeout(resolve, 500));
-    return useVehicleStore.getState().vehicles;
+
+interface UseVehicleQueryStoreOptions {
+    listParams?: VehicleListParams;
+    vehicleId?: number | null;
+}
+
+
+
+const fetchVehicles = async (params?: VehicleListParams): Promise<VehicleListAPIResponse> => {
+    const resp = await vehiclesRepository.list(params);
+    return resp;
 };
 
 const createVehicleAPI = async (data: CreateVehicleSchema): Promise<VehicleListItem> => {
-    // Use the store's createVehicle method which handles the logic
-    return useVehicleStore.getState().createVehicle(data);
+    const payload: any = {
+        plate: data.plate,
+        model: data.model,
+        brand: data.brand,
+        color: data.color,
+        vehicle_type: data.vehicleType,
+    };
+
+    const resp = await vehiclesRepository.create(payload);
+
+    return (resp as unknown) as VehicleListItem;
 };
 
 
-export function useVehicleQueryStore() {
+export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
+    const { listParams, vehicleId } = options || {};
     const queryClient = useQueryClient();
-    const { vehicles, setVehicles } = useVehicleStore();
-
     // Query for fetching vehicles list
     const vehiclesQuery = useQuery({
-        queryKey: VEHICLES_QUERY_KEY,
-        queryFn: fetchVehicles,
-        initialData: vehicles,
+        queryKey: [VEHICLES_QUERY_KEY, listParams],
+        queryFn: () => fetchVehicles(listParams),
         staleTime: 5 * 60 * 1000, // 5 minutes
+        placeholderData: (previousData) => previousData
+
     });
 
     // Mutation for creating a new vehicle
     const createVehicleMutation = useMutation({
         mutationFn: createVehicleAPI,
-        onSuccess: (newVehicle) => {
-            // Update the query cache with the new vehicle
-            queryClient.setQueryData(VEHICLES_QUERY_KEY, (oldData: VehicleListItem[] | undefined) => {
-                if (!oldData) return [newVehicle];
-                return [...oldData, newVehicle];
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: VEHICLES_QUERY_KEY,
             });
-
-            // Also update the Zustand store to keep them in sync
-            const currentVehicles = queryClient.getQueryData<VehicleListItem[]>(VEHICLES_QUERY_KEY) || [];
-            setVehicles(currentVehicles);
         },
         onError: (error) => {
             console.error("Error creating vehicle:", error);
@@ -51,7 +61,10 @@ export function useVehicleQueryStore() {
 
     return {
         // Query data
-        vehicles: vehiclesQuery.data || [],
+        vehicles: vehiclesQuery.data?.items || [],
+        totalItems: vehiclesQuery.data?.total_items || 0,
+        totalPages: vehiclesQuery.data?.total_pages || 1,
+        currentPage: vehiclesQuery.data?.page || 1,
         isLoading: vehiclesQuery.isLoading,
         isError: vehiclesQuery.isError,
         error: vehiclesQuery.error,
@@ -61,7 +74,7 @@ export function useVehicleQueryStore() {
         createVehicleAsync: createVehicleMutation.mutateAsync,
         isCreating: createVehicleMutation.isPending,
         createError: createVehicleMutation.error,
-        
+
         // Utility functions
         refetch: vehiclesQuery.refetch,
         invalidate: () => queryClient.invalidateQueries({ queryKey: VEHICLES_QUERY_KEY }),

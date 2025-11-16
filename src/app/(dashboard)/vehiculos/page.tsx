@@ -10,10 +10,9 @@ import { Table, type TableColumn } from "@/modules/shared/components/table/Table
 import { TablePagination } from "@/modules/shared/components/table/TablePagination";
 import { SearchInput } from "@/modules/shared/components/SearchInput";
 import { useDebounce } from "@/modules/shared/hooks/useDebounce";
-import { usePagination } from "@/modules/shared/hooks/usePagination";
-import { vehiclesMock } from "@/mocks/vehicles";
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { FiPlus, FiEdit, FiTrash2, FiTruck } from "react-icons/fi";
+import { useVehicleQueryStore } from "@/modules/dashboard/vehicles/hooks/useVehicleQueryStore";
 
 type VehicleRow = Record<string, unknown> & {
     id: number;
@@ -36,7 +35,76 @@ const VEHICLE_TYPE_STYLES: Record<string, string> = {
 
 export default function VehiclesPage() {
     const router = useRouter();
-    
+
+
+    const [searchValue, setSearchValue] = useState("");
+    const [typeFilter, setTypeFilter] = useState<"all" | string>("all");
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<5 | 10 | 15>(5);
+
+    const debouncedSearchTerm = useDebounce(searchValue, 300);
+
+
+    const {
+        vehicles,
+        totalItems,
+        totalPages,
+        isLoading,
+        isError,
+    } = useVehicleQueryStore({
+        listParams: {
+            limit: pageSize,
+            page: page,
+            plate_brand_or_model: debouncedSearchTerm,
+        }
+    });
+
+    const filteredVehicles = useMemo(() => {
+        if (typeFilter === "all") return vehicles;
+        return vehicles.filter(v => v.VehicleType === typeFilter);
+    }, [vehicles, typeFilter]);
+
+
+    const stats = {
+        totalVehicles: totalItems,
+        assignedVehicles: filteredVehicles.filter(v => v.DriverName).length,
+        availableVehicles: filteredVehicles.filter(v => !v.DriverName).length,
+        vehicleTypes: Array.from(new Set(filteredVehicles.map(v => v.VehicleType))),
+    }
+
+    const vehicleRows: VehicleRow[] = filteredVehicles.map((vehicle) => ({
+        id: vehicle.ID,
+        plate: vehicle.Plate,
+        brand: vehicle.Brand,
+        model: vehicle.Model,
+        vehicleType: vehicle.VehicleType,
+        driverName: vehicle.DriverName && vehicle.DriverLastName
+            ? `${vehicle.DriverName} ${vehicle.DriverLastName}`
+            : "",
+    }));
+
+    const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchValue(event.target.value);
+        setPage(1);
+    };
+
+
+    const handlePageSizeChange = (newSize: 5 | 10 | 15) => {
+        setPageSize(newSize);
+        setPage(1);
+    };
+
+    const handlePageChange = (newPage: number) => {
+        const validPage = Math.min(Math.max(1, newPage), totalPages);
+        setPage(validPage);
+    };
+
+    const handleTypeFilterChange = (type: string) => {
+        setTypeFilter(type as typeof typeFilter);
+        setPage(1);
+    };
+
+
     // Define columns inside component to access router
     const columns: TableColumn<VehicleRow>[] = [
         {
@@ -101,62 +169,7 @@ export default function VehiclesPage() {
         },
     ];
 
-    const [searchValue, setSearchValue] = useState("");
-    const [typeFilter, setTypeFilter] = useState<"all" | string>("all");
-    const debouncedSearchTerm = useDebounce(searchValue, 300);
 
-    const filteredVehicles = useMemo(() => {
-        let filtered = vehiclesMock;
-
-        // Filter by search term
-        if (debouncedSearchTerm) {
-            filtered = filtered.filter(
-                (vehicle) =>
-                    vehicle.Plate.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                    vehicle.Brand.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                    vehicle.Model.toLowerCase().includes(debouncedSearchTerm.toLowerCase()) ||
-                    (vehicle.driverName && vehicle.driverName.toLowerCase().includes(debouncedSearchTerm.toLowerCase()))
-            );
-        }
-
-        // Filter by type
-        if (typeFilter !== "all") {
-            filtered = filtered.filter((vehicle) => vehicle.VehicleType === typeFilter);
-        }
-
-        return filtered;
-    }, [debouncedSearchTerm, typeFilter]);
-
-    const { page, pageSize, offset, limit, goToPage, setPageSize, resetPage } = usePagination({
-        totalItems: filteredVehicles.length,
-        initialPageSize: 10,
-    });
-
-    const paginatedVehicles = useMemo(() => {
-        return filteredVehicles.slice(offset, offset + limit);
-    }, [filteredVehicles, offset, limit]);
-
-    const vehicleRows: VehicleRow[] = paginatedVehicles.map((vehicle) => ({
-        id: vehicle.id,
-        plate: vehicle.Plate,
-        brand: vehicle.Brand,
-        model: vehicle.Model,
-        vehicleType: vehicle.VehicleType,
-        driverName: vehicle.driverName,
-    }));
-
-    const handleSearchChange = (value: string) => {
-        setSearchValue(value);
-        resetPage();
-    };
-
-    const handleTypeFilterChange = (type: string) => {
-        setTypeFilter(type);
-        resetPage();
-    };
-
-    // Get unique vehicle types for filter
-    const vehicleTypes = Array.from(new Set(vehiclesMock.map(v => v.VehicleType)));
 
     return (
         <div className="space-y-8">
@@ -181,7 +194,7 @@ export default function VehiclesPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-600">Total Vehículos</p>
-                            <p className="text-2xl font-bold text-slate-900">{vehiclesMock.length}</p>
+                            <p className="text-2xl font-bold text-slate-900">{stats.totalVehicles}</p>
                         </div>
                         <div className="h-12 w-12 bg-blue-50 rounded-lg flex items-center justify-center">
                             <FiTruck className="h-6 w-6 text-blue-600" />
@@ -194,7 +207,7 @@ export default function VehiclesPage() {
                         <div>
                             <p className="text-sm font-medium text-slate-600">Asignados</p>
                             <p className="text-2xl font-bold text-slate-900">
-                                {vehiclesMock.filter(v => v.driverId).length}
+                                {stats.assignedVehicles}
                             </p>
                         </div>
                         <div className="h-12 w-12 bg-green-50 rounded-lg flex items-center justify-center">
@@ -208,7 +221,7 @@ export default function VehiclesPage() {
                         <div>
                             <p className="text-sm font-medium text-slate-600">Disponibles</p>
                             <p className="text-2xl font-bold text-slate-900">
-                                {vehiclesMock.filter(v => !v.driverId).length}
+                                {stats.availableVehicles}
                             </p>
                         </div>
                         <div className="h-12 w-12 bg-yellow-50 rounded-lg flex items-center justify-center">
@@ -221,7 +234,7 @@ export default function VehiclesPage() {
                     <div className="flex items-center justify-between">
                         <div>
                             <p className="text-sm font-medium text-slate-600">Tipos</p>
-                            <p className="text-2xl font-bold text-slate-900">{vehicleTypes.length}</p>
+                            <p className="text-2xl font-bold text-slate-900">{stats.vehicleTypes.length}</p>
                         </div>
                         <div className="h-12 w-12 bg-purple-50 rounded-lg flex items-center justify-center">
                             <FiTruck className="h-6 w-6 text-purple-600" />
@@ -235,9 +248,9 @@ export default function VehiclesPage() {
                 <div className="flex flex-col sm:flex-row gap-4">
                     <div className="flex-1">
                         <SearchInput
-                            placeholder="Buscar por placa, marca, modelo o conductor..."
+                            placeholder="Buscar por placa, marca, modelo..."
                             value={searchValue}
-                            onChange={(e) => handleSearchChange(e.target.value)}
+                            onChange={handleSearchChange}
                         />
                     </div>
                     <div className="flex gap-2">
@@ -247,42 +260,43 @@ export default function VehiclesPage() {
                             className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-100"
                         >
                             <option value="all">Todos los tipos</option>
-                            {vehicleTypes.map((type) => (
-                                <option key={type} value={type}>
-                                    {type}
-                                </option>
-                            ))}
+                            <option value={"Furgoneta"}>Furgoneta</option>
+                            <option value={"Camión"}>Camión</option>
+                            <option value={"Furgón"}>Furgón</option>
+                            <option value={"Motocicleta"}>Motocicleta</option>
+                            <option value={"Bicicleta"}>Bicicleta</option>
+                            <option value={"Otro"}>Otro</option>
+
                         </select>
                     </div>
                 </div>
             </div>
 
             {/* Table */}
-            <div className="bg-white rounded-xl border border-slate-200">
-                <Table
-                    columns={columns}
-                    data={vehicleRows}
-                    emptyState={
-                        <div className="text-center py-12">
-                            <FiTruck className="mx-auto h-12 w-12 text-slate-400" />
-                            <h3 className="mt-2 text-sm font-semibold text-slate-900">No hay vehículos</h3>
-                            <p className="mt-1 text-sm text-slate-500">
-                                {searchValue || typeFilter !== "all"
-                                    ? "No se encontraron vehículos con los filtros aplicados."
-                                    : "Comienza agregando un nuevo vehículo a la flota."}
-                            </p>
-                        </div>
-                    }
-                />
-                
-                <TablePagination
-                    page={page}
-                    pageSize={pageSize}
-                    totalItems={filteredVehicles.length}
-                    onPageChange={goToPage}
-                    onPageSizeChange={setPageSize}
-                    className="border-t border-slate-200"
-                />
+            <div className="space-y-4">
+                {isLoading ? (
+                    <div className="text-center py-8">Cargando Vehiculos...</div>
+                ) : isError ? (
+                    <div className="text-center py-8 text-red-600">Error al cargar vehiculos</div>
+                ) : (
+                    <>
+                        <Table
+                            columns={columns}
+                            data={vehicleRows}
+                            getRowKey={(row) => row.id}
+                            emptyState="No se encontraron vehiculos"
+                        />
+
+                        <TablePagination
+                            page={page}
+                            pageSize={pageSize}
+                            totalItems={totalItems}
+                            totalPages={totalPages}
+                            onPageChange={handlePageChange}
+                            onPageSizeChange={handlePageSizeChange}
+                        />
+                    </>
+                )}
             </div>
         </div>
     );

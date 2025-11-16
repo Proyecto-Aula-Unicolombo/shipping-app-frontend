@@ -34,8 +34,8 @@ export interface Vehicle {
     Model: string;
     Color: string;
     VehicleType: string;
-    driverId?: number; // Foreign key to Driver
-    driverName?: string; // Computed field for display
+    DriverName?: string;
+    DriverLastName?: string;
 }
 
 export interface Orders {

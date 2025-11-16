@@ -42,7 +42,6 @@ export default function UsersPage() {
     const [roleFilter, setRoleFilter] = useState<"all" | UserRole>("all");
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState<5 | 10 | 15>(5);
-    const {deleteUserAsync, isDeleting} = useUserQueryStore();
 
     const debouncedSearchTerm = useDebounce(searchValue, 300);
 
@@ -53,6 +52,7 @@ export default function UsersPage() {
         totalPages,
         isLoading,
         isError,
+        deleteUserAsync
     } = useUserQueryStore({
         listParams: {
             limit: pageSize,

@@ -20,7 +20,7 @@ interface VehicleFormProps {
 export function VehicleForm({ vehicle, mode }: VehicleFormProps) {
     const router = useRouter();
     const { createVehicleAsync, isCreating } = useVehicleQueryStore();
-    
+
     const isEditMode = mode === "edit";
 
     // Prepare default values based on mode
@@ -32,7 +32,6 @@ export function VehicleForm({ vehicle, mode }: VehicleFormProps) {
                 model: vehicle.Model,
                 color: vehicle.Color,
                 vehicleType: vehicle.VehicleType,
-                driverId: vehicle.driverId,
             };
         }
         return createVehicleDefaultValues;
@@ -71,7 +70,7 @@ export function VehicleForm({ vehicle, mode }: VehicleFormProps) {
                 {/* Información del Vehículo */}
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-slate-900">Información del Vehículo</h3>
-                    
+
                     <FormField label="Placa *" htmlFor="plate" error={errors.plate?.message}>
                         <Input
                             id="plate"
@@ -106,7 +105,7 @@ export function VehicleForm({ vehicle, mode }: VehicleFormProps) {
                 {/* Características */}
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-slate-900">Características</h3>
-                    
+
                     <FormField label="Color *" htmlFor="color" error={errors.color?.message}>
                         <Input
                             id="color"
@@ -132,21 +131,6 @@ export function VehicleForm({ vehicle, mode }: VehicleFormProps) {
                         </Select>
                     </FormField>
 
-                    <FormField label="Conductor Asignado" htmlFor="driverId" error={errors.driverId?.message}>
-                        <Select
-                            id="driverId"
-                            {...register("driverId", { 
-                                setValueAs: (value) => value === "" ? undefined : Number(value) 
-                            })}
-                            isInvalid={!!errors.driverId}
-                        >
-                            <option value="">Sin asignar</option>
-                            {/* TODO: Load from drivers mock */}
-                            <option value="1">Conductor 1</option>
-                            <option value="2">Conductor 2</option>
-                            <option value="3">Conductor 3</option>
-                        </Select>
-                    </FormField>
                 </div>
             </div>
 
