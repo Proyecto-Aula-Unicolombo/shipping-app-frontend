@@ -10,7 +10,6 @@ export default async function EditUserRoute({ params }: EditUserRouteProps) {
     const { id } = await params;
     const userId = parseInt(id, 10);
 
-    console.log("Editing user with ID:", userId);
     if (isNaN(userId)) {
         return (
             <div className="space-y-8">

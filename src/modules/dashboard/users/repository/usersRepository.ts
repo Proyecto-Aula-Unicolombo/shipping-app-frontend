@@ -1,7 +1,6 @@
 import axios from 'axios';
-import { CreateUserDTO, UpdateUserDTO } from '@/types/users';
 import { User } from '@/types/domain';
-import type { UsersListAPIResponse } from '@/types/users';
+import type { UsersListAPIResponse, CreateUserDTO, UpdateUserDTO } from '@/types/users';
 
 export interface UserListParams {
   page: number;
@@ -32,7 +31,7 @@ export const usersRepository = {
     const res = await api.get(`/users/?${queryParams.toString()}`);
     return res.data;
   },
-  
+
   get: async (id: string): Promise<User> => {
     const res = await api.get(`/users/${id}`);
     return res.data;

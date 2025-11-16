@@ -8,7 +8,13 @@ import { Button } from "@/modules/shared/ui/Button";
 import { Input } from "@/modules/shared/ui/Input";
 import { Select } from "@/modules/shared/ui/Select";
 import { FormField } from "@/modules/shared/ui/FormField";
-import { createUserSchema, createUserDefaultValues, type CreateUserSchema } from "../schemas/createUser.schema";
+import {
+    createUserSchema,
+    updateUserSchema,
+    createUserDefaultValues,
+    type CreateUserSchema,
+    type UpdateUserSchema
+} from "../schemas/createUser.schema";
 import { useUserQueryStore } from "../hooks/useUserQueryStore";
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { FiEye, FiEyeOff } from "react-icons/fi";
@@ -21,14 +27,16 @@ interface UserFormProps {
 
 export function UserForm({ user, mode }: UserFormProps) {
     const router = useRouter();
-    const { createUserAsync, isCreating } = useUserQueryStore();
+    const { createUserAsync, isCreating, updateUserAsync, isUpdating } = useUserQueryStore();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    
+
     const isEditMode = mode === "edit";
+    const isDriverRole = isEditMode && user?.Role === "driver";
+
 
     // Prepare default values based on mode
-    const getDefaultValues = (): CreateUserSchema => {
+    const getDefaultValues = (): CreateUserSchema | UpdateUserSchema => {
         if (isEditMode && user) {
             return {
                 name: user.Name,
@@ -50,22 +58,22 @@ export function UserForm({ user, mode }: UserFormProps) {
         formState: { errors },
         watch,
         reset,
-    } = useForm<CreateUserSchema>({
-        resolver: zodResolver(createUserSchema),
+    } = useForm<CreateUserSchema | UpdateUserSchema>({
+        resolver: zodResolver(isEditMode ? updateUserSchema : createUserSchema),
         defaultValues: getDefaultValues(),
     });
 
+
     const selectedRole = watch("role");
 
-    const onSubmit = async (data: CreateUserSchema) => {
+    const onSubmit = async (data: CreateUserSchema | UpdateUserSchema) => {
         try {
             if (isEditMode && user) {
-                // TODO: Implement updateUserAsync when needed
-                console.log("Edit mode - would update user:", user.ID, data);
-                // For now, just navigate back
+                await updateUserAsync({ id: user.ID, data });
+                reset();
                 router.push(ROUTES.settings.users);
             } else {
-                await createUserAsync(data);
+                await createUserAsync(data as CreateUserSchema);
                 reset();
                 router.push(ROUTES.settings.users);
             }
@@ -80,13 +88,24 @@ export function UserForm({ user, mode }: UserFormProps) {
         { value: "admin", label: "Administrador" },
     ];
 
+    const getRoleOptions = () => {
+        if (isEditMode) {
+
+            return roleOptions.filter(option => option.value !== "driver");
+        }
+
+        return roleOptions;
+    };
+
+    const availableRoleOptions = getRoleOptions();
+
     return (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Información Personal */}
                 <div className="space-y-4">
                     <h3 className="text-lg font-semibold text-slate-900">Información Personal</h3>
-                    
+
                     <FormField label="Nombre *" htmlFor="name" error={errors.name?.message}>
                         <Input
                             id="name"
@@ -118,33 +137,59 @@ export function UserForm({ user, mode }: UserFormProps) {
                     </FormField>
 
                     <FormField label="Rol *" htmlFor="role" error={errors.role?.message}>
-                        <Select
-                            id="role"
-                            {...register("role")}
-                            isInvalid={!!errors.role}
-                        >
-                            <option value="">Selecciona un rol</option>
-                            {roleOptions.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </Select>
+                        {isDriverRole ? (
+                            <div className="relative">
+                                <Input
+                                    id="role"
+                                    type="text"
+                                    value="Conductor"
+                                    disabled
+                                    className="bg-slate-100 cursor-not-allowed"
+                                />
+                                <p className="mt-1 text-sm text-slate-500">
+                                    No se puede cambiar el rol de un conductor
+                                </p>
+                            </div>
+                        ) : (
+                            <Select
+                                id="role"
+                                {...register("role")}
+                                isInvalid={!!errors.role}
+                            >
+                                <option value="">Selecciona un rol</option>
+                                {availableRoleOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </Select>
+                        )}
+                        {isEditMode && !isDriverRole && (
+                            <p className="mt-1 text-sm text-slate-500">
+                                Solo se puede cambiar entre Administrador y Coordinador
+                            </p>
+                        )}
                     </FormField>
                 </div>
 
                 {/* Información de Acceso */}
                 <div className="space-y-4">
-                    <h3 className="text-lg font-semibold text-slate-900">Información de Acceso</h3>
-                    
-                    <FormField label="Contraseña *" htmlFor="password" error={errors.password?.message}>
+                    <h3 className="text-lg font-semibold text-slate-900">
+                        {isEditMode ? "Cambiar Contraseña (Opcional)" : "Información de Acceso"}
+                    </h3>
+
+                    <FormField
+                        label={isEditMode ? "Nueva Contraseña" : "Contraseña *"}
+                        htmlFor="password"
+                        error={errors.password?.message}
+                    >
                         <div className="relative">
                             <Input
                                 id="password"
                                 type={showPassword ? "text" : "password"}
                                 {...register("password")}
                                 isInvalid={!!errors.password}
-                                placeholder="Mínimo 6 caracteres"
+                                placeholder={isEditMode ? "Dejar en blanco para mantener la actual" : "Mínimo 6 caracteres"}
                                 className="pr-10"
                             />
                             <button
@@ -157,7 +202,11 @@ export function UserForm({ user, mode }: UserFormProps) {
                         </div>
                     </FormField>
 
-                    <FormField label="Confirmar Contraseña *" htmlFor="confirmPassword" error={errors.confirmPassword?.message}>
+                    <FormField
+                        label={isEditMode ? "Confirmar Nueva Contraseña" : "Confirmar Contraseña *"}
+                        htmlFor="confirmPassword"
+                        error={errors.confirmPassword?.message}
+                    >
                         <div className="relative">
                             <Input
                                 id="confirmPassword"
@@ -233,7 +282,7 @@ export function UserForm({ user, mode }: UserFormProps) {
                     disabled={isCreating}
                     className="min-w-[120px]"
                 >
-                    {isCreating ? (isEditMode ? "Actualizando..." : "Creando...") : (isEditMode ? "Actualizar Usuario" : "Crear Usuario")}
+                    {isCreating || isUpdating ? (isEditMode ? "Actualizando..." : "Creando...") : (isEditMode ? "Actualizar Usuario" : "Crear Usuario")}
                 </Button>
             </div>
         </form>

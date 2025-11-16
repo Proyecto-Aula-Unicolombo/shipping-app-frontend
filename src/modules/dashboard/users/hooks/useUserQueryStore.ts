@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import type { CreateUserSchema } from "../schemas/createUser.schema";
+import type { CreateUserSchema, UpdateUserSchema } from "../schemas/createUser.schema";
 import type { UserDetail, UserListItem, UsersListAPIResponse } from "@/types/users";
 import { UserListParams, usersRepository } from "../repository/usersRepository";
 
@@ -9,6 +9,11 @@ const USER_DETAIL_QUERY_KEY = (id: number) => ["users", id] as const;
 interface UseUserQueryStoreOptions {
     listParams?: UserListParams;
     userId?: number | null;
+}
+
+interface UpdateUserPayload {
+    id: number;
+    data: UpdateUserSchema;
 }
 
 const transformAPIUser = (apiUser: any): UserListItem => {
@@ -55,9 +60,23 @@ const createUserAPI = async (data: CreateUserSchema): Promise<UserListItem> => {
     return (res as unknown) as UserListItem;
 };
 
-const updateUserStatusAPI = async (params: { id: number; status: "Activo" | "Inactivo" | "Suspendido" }): Promise<{ id: number; status: "Activo" | "Inactivo" | "Suspendido" }> => {
-    await usersRepository.update(String(params.id), { status: params.status } as any);
-    return { id: params.id, status: params.status };
+const updateUserAPI = async (pyl: UpdateUserPayload): Promise<UserListItem> => {
+    const payload: any = {
+        name: pyl.data.name,
+        last_name: pyl.data.lastName,
+        email: pyl.data.email,
+        role: pyl.data.role,
+        phone_number: pyl.data.phoneNumber || "",
+        num_licence: pyl.data.license || "",
+    };
+
+    if (pyl.data.password && pyl.data.password.trim() !== "") {
+        payload.password = pyl.data.password;
+    }
+
+    const resp = await usersRepository.update(String(pyl.id), payload);
+
+    return (resp as unknown) as UserListItem;
 };
 
 export function useUserQueryStore(options?: UseUserQueryStoreOptions) {
@@ -104,26 +123,16 @@ export function useUserQueryStore(options?: UseUserQueryStoreOptions) {
 
     // Mutation for updating user status
     const updateUserStatusMutation = useMutation({
-        mutationFn: updateUserStatusAPI,
-        onSuccess: (updatedData) => {
-            // Update the query cache optimistically
-            queryClient.setQueryData(USERS_QUERY_KEY, (oldData: UserListItem[] | undefined) => {
-                if (!oldData) return oldData;
-                return oldData.map(user =>
-                    user.ID === updatedData.id
-                        ? { ...user, status: updatedData.status }
-                        : user
-                );
-            });
+        mutationFn: updateUserAPI,
+        onSuccess: (_, variables) => {
+
             queryClient.invalidateQueries({
                 queryKey: [USERS_QUERY_KEY],
             });
-            // Also update the Zustand store to keep them in sync
-            // const currentUsers = queryClient.getQueryData<UserListItem[]>(USERS_QUERY_KEY) || [];
-            // setUsers(currentUsers);
 
-            // Invalidate to ensure fresh data
-            queryClient.invalidateQueries({ queryKey: USERS_QUERY_KEY });
+            queryClient.invalidateQueries({
+                queryKey: USER_DETAIL_QUERY_KEY(variables.id),
+            });
         },
         onError: (error) => {
             console.error("Error updating user status:", error);
@@ -147,7 +156,7 @@ export function useUserQueryStore(options?: UseUserQueryStoreOptions) {
         isErrorDetail: userDetailQuery.isError,
         errorDetail: userDetailQuery.error,
 
-        
+
         // Mutation data
         createUser: createUserMutation.mutate,
         createUserAsync: createUserMutation.mutateAsync,
@@ -155,10 +164,10 @@ export function useUserQueryStore(options?: UseUserQueryStoreOptions) {
         createError: createUserMutation.error,
 
         // Status update mutation data
-        updateUserStatus: updateUserStatusMutation.mutate,
-        updateUserStatusAsync: updateUserStatusMutation.mutateAsync,
-        isUpdatingStatus: updateUserStatusMutation.isPending,
-        updateStatusError: updateUserStatusMutation.error,
+        updateUser: updateUserStatusMutation.mutate,
+        updateUserAsync: updateUserStatusMutation.mutateAsync,
+        isUpdating: updateUserStatusMutation.isPending,
+        updateError: updateUserStatusMutation.error,
 
         // Utility functions
         refetch: usersQuery.refetch,
