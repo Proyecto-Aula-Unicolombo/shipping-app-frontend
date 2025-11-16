@@ -16,7 +16,7 @@ export type UserDetail = UserListItem;
 const usersMockData: UserListItem[] = [
     // Administradores
     {
-        id: 1,
+        ID: 1,
         Name: "Ana María",
         LastName: "González",
         Email: "admin@logistica.com",
@@ -27,7 +27,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-20T14:30:00Z"
     },
     {
-        id: 2,
+        ID: 2,
         Name: "Roberto",
         LastName: "Mendoza",
         Email: "roberto.admin@logistica.com",
@@ -40,7 +40,7 @@ const usersMockData: UserListItem[] = [
 
     // Coordinadores
     {
-        id: 3,
+        ID: 3,
         Name: "María Elena",
         LastName: "Rodríguez",
         Email: "coordinador1@logistica.com",
@@ -51,7 +51,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-20T12:15:00Z"
     },
     {
-        id: 4,
+        ID: 4,
         Name: "Alejandro",
         LastName: "Vargas",
         Email: "alejandro.coord@logistica.com",
@@ -62,7 +62,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-20T09:30:00Z"
     },
     {
-        id: 5,
+        ID: 5,
         Name: "Carmen",
         LastName: "Jiménez",
         Email: "carmen.coord@logistica.com",
@@ -75,7 +75,7 @@ const usersMockData: UserListItem[] = [
 
     // Conductores (usando los existentes)
     {
-        id: 101,
+        ID: 101,
         Name: "Carlos",
         LastName: "Ramírez",
         Email: "carlos.ramirez@example.com",
@@ -86,7 +86,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-20T07:30:00Z"
     },
     {
-        id: 102,
+        ID: 102,
         Name: "Sofía",
         LastName: "García",
         Email: "sofia.garcia@example.com",
@@ -97,7 +97,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-20T06:45:00Z"
     },
     {
-        id: 103,
+        ID: 103,
         Name: "Diego",
         LastName: "Martínez",
         Email: "diego.martinez@example.com",
@@ -108,7 +108,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-19T18:20:00Z"
     },
     {
-        id: 104,
+        ID: 104,
         Name: "Luisa",
         LastName: "Hernández",
         Email: "luisa.hernandez@example.com",
@@ -119,7 +119,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-20T08:15:00Z"
     },
     {
-        id: 105,
+        ID: 105,
         Name: "Miguel",
         LastName: "Torres",
         Email: "miguel.torres@example.com",
@@ -132,7 +132,7 @@ const usersMockData: UserListItem[] = [
 
     // Remitentes
     {
-        id: 201,
+        ID: 201,
         Name: "Empresa ABC",
         LastName: "Logística",
         Email: "contacto@empresaabc.com",
@@ -143,10 +143,10 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-20T15:30:00Z"
     },
     {
-        id: 202,
+        ID: 202,
         Name: "Comercial",
         LastName: "Del Caribe",
-        Email: "pedidos@comercialcaribe.com",
+        Email: "pedIDos@comercialcaribe.com",
         Password: "hashed-password",
         Role: "remitente",
         status: "Activo",
@@ -154,10 +154,10 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-19T11:45:00Z"
     },
     {
-        id: 203,
-        Name: "Distribuidora",
+        ID: 203,
+        Name: "DistribuIDora",
         LastName: "Cartagena",
-        Email: "envios@distribuidoractg.com",
+        Email: "envios@distribuIDoractg.com",
         Password: "hashed-password",
         Role: "remitente",
         status: "Activo",
@@ -165,7 +165,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-20T10:20:00Z"
     },
     {
-        id: 204,
+        ID: 204,
         Name: "Farmacia",
         LastName: "Central",
         Email: "despachos@farmaciacentral.com",
@@ -176,7 +176,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-18T13:15:00Z"
     },
     {
-        id: 205,
+        ID: 205,
         Name: "Supermercado",
         LastName: "La Plaza",
         Email: "domicilios@laplaza.com",
@@ -187,7 +187,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-12T09:00:00Z"
     },
     {
-        id: 206,
+        ID: 206,
         Name: "Restaurante",
         LastName: "El Pescador",
         Email: "delivery@elpescador.com",
@@ -198,7 +198,7 @@ const usersMockData: UserListItem[] = [
         lastLogin: "2024-01-20T19:30:00Z"
     },
     {
-        id: 207,
+        ID: 207,
         Name: "Tienda",
         LastName: "Tecnológica",
         Email: "ventas@tecnostore.com",
@@ -218,8 +218,8 @@ export function addUserToMock(user: UserListItem): void {
     usersMockData.push(user);
 }
 
-export function updateUserInMock(id: number, updates: Partial<UserListItem>): void {
-    const index = usersMockData.findIndex(user => user.id === id);
+export function updateUserInMock(ID: number, updates: Partial<UserListItem>): void {
+    const index = usersMockData.findIndex(user => user.ID === ID);
     if (index !== -1) {
         usersMockData[index] = { ...usersMockData[index], ...updates };
     }
@@ -227,7 +227,7 @@ export function updateUserInMock(id: number, updates: Partial<UserListItem>): vo
 
 // Utility functions
 export function getUserById(id: number): UserListItem | undefined {
-    return usersMockData.find((user) => user.id === id);
+    return usersMockData.find((user) => user.ID === id);
 }
 
 export function getUsersByRole(role: UserRole): UserListItem[] {

@@ -11,21 +11,20 @@ export interface GeomPoint {
 // --- Entidades Principales ---
 
 export interface User {
-    id: number;
+    ID: number;
     Name: string;
     LastName: string;
     Email: string;
-    Password: string;
+    Password?: string;
     Role: string;
+    Driver?: Driver;
 }
 
 export interface Driver {
     id: number;
-    PhoneNumber: string;
-    License: string;
-    UserID: number;
-    User: User;
-    Vehicle?: Vehicle; // Optional relationship with Vehicle
+    phone_number: string;
+    num_licence: string;
+    UserID?: number;
 }
 
 export interface Vehicle {

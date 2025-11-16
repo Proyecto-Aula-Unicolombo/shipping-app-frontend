@@ -9,8 +9,8 @@ import { Table, type TableColumn } from "@/modules/shared/components/table/Table
 import { TablePagination } from "@/modules/shared/components/table/TablePagination";
 import { SearchInput } from "@/modules/shared/components/SearchInput";
 import { useDebounce } from "@/modules/shared/hooks/useDebounce";
-import { usePagination } from "@/modules/shared/hooks/usePagination";
-import { getVisibleUsers, getVisibleUsersCount, type UserRole, type PublicUserRole } from "@/mocks/users";
+import { useUserQueryStore } from "@/modules/dashboard/users/hooks/useUserQueryStore";
+import { PublicUserRole, UserRole } from "@/types/users";
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { FiPlus, FiEdit, FiTrash2, FiUser } from "react-icons/fi";
 import Link from "next/link";
@@ -26,17 +26,49 @@ type UserRow = Record<string, unknown> & {
 const ROLE_STYLES: Record<PublicUserRole, string> = {
     coordinador: "bg-blue-50 text-blue-700",
     conductor: "bg-green-50 text-green-700",
-    remitente: "bg-orange-50 text-orange-700",
+    administrador: "bg-orange-50 text-orange-700",
 };
 
 const ROLE_LABELS: Record<PublicUserRole, string> = {
     coordinador: "Coordinador",
     conductor: "Conductor",
-    remitente: "Remitente",
+    administrador: "Administrador",
 };
 
 export default function UsersPage() {
     const router = useRouter();
+
+    const [searchValue, setSearchValue] = useState("");
+    const [roleFilter, setRoleFilter] = useState<"all" | UserRole>("all");
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<5 | 10 | 15>(5);
+
+    const debouncedSearchTerm = useDebounce(searchValue, 300);
+
+
+    const {
+        users,
+        totalItems,
+        totalPages,
+        isLoading,
+        isError,
+    } = useUserQueryStore({
+        listParams: {
+            limit: pageSize,
+            page: page,
+            name_or_last_name: debouncedSearchTerm,
+            role: roleFilter,
+        }
+    });
+
+    const stats = {
+        total: totalItems,
+        byRole: {
+            coordinador: users.filter((u) => u.Role === "coord").length,
+            conductor: users.filter((u) => u.Role === "driver").length,
+            administrador: users.filter((u) => u.Role === "admin").length,
+        }
+    }
 
     // Define columns inside component to access router
     const columns: TableColumn<UserRow>[] = [
@@ -90,59 +122,37 @@ export default function UsersPage() {
             ),
         },
     ];
-    const [searchValue, setSearchValue] = useState("");
-    const [roleFilter, setRoleFilter] = useState<"all" | PublicUserRole>("all");
-    const debouncedSearchTerm = useDebounce(searchValue, 300);
 
-    // Simulate current user role (in real app, this would come from auth context)
-    // For demo purposes, we'll use "coordinador" to show the non-admin view
-    // Change to "admin" to see all users including other admins
-    const currentUserRole: UserRole = "coordinador";
 
-    const visibleUsers = getVisibleUsers(currentUserRole);
-    const stats = getVisibleUsersCount(currentUserRole);
-
-    // Filter users based on search query, role, and status
-    const filteredUsers = useMemo(() => {
-        const term = debouncedSearchTerm.trim().toLowerCase();
-
-        return visibleUsers.filter(user => {
-            const matchesSearch = !term ||
-                user.Name.toLowerCase().includes(term) ||
-                user.LastName.toLowerCase().includes(term) ||
-                user.Email.toLowerCase().includes(term);
-
-            const matchesRole = roleFilter === "all" || user.Role === roleFilter;
-
-            return matchesSearch && matchesRole;
-        });
-    }, [debouncedSearchTerm, roleFilter, visibleUsers]);
-
-    const {
-        page,
-        pageSize,
-        offset,
-        setPage,
-        setPageSize,
-        totalItems,
-        resetPage,
-    } = usePagination<5 | 10 | 15>({ totalItems: filteredUsers.length, initialPageSize: 10 });
-
-    const paginatedUsers = filteredUsers.slice(offset, offset + pageSize);
-    const tableRows = paginatedUsers.map<UserRow>((user) => ({
-        id: user.id,
+    const tableRows: UserRow[] = users.map((user) => ({
+        id: user.ID,
         name: `${user.Name} ${user.LastName}`,
         email: user.Email,
-        role: user.Role as PublicUserRole,
-        createdAt: new Date(user.createdAt).toLocaleDateString('es-ES'),
-        lastLogin: user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('es-ES') : 'Nunca',
-        actions: null,
+        role: user.Role === "admin" ? "administrador" : user.Role === "coord" ? "coordinador" : "conductor",
     }));
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(event.target.value);
-        resetPage();
+        // resetPage();
+        setPage(1);
     };
+
+    const handleRoleChange = (newRole: string) => {
+        setRoleFilter(newRole as typeof roleFilter);
+        // resetPage();
+        setPage(1);
+    };
+
+    const handlePageSizeChange = (newSize: 5 | 10 | 15) => {
+        setPageSize(newSize);
+        setPage(1);
+    };
+
+    const handlePageChange = (newPage: number) => {
+        const validPage = Math.min(Math.max(1, newPage), totalPages);
+        setPage(validPage);
+    };
+
 
     return (
         <div className="space-y-8">
@@ -199,8 +209,8 @@ export default function UsersPage() {
                 <div className="bg-white rounded-xl border border-slate-200 p-6">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-slate-600">Remitentes</p>
-                            <p className="text-2xl font-bold text-orange-600">{stats.byRole.remitente}</p>
+                            <p className="text-sm font-medium text-slate-600">Administradores</p>
+                            <p className="text-2xl font-bold text-orange-600">{stats.byRole.administrador}</p>
                         </div>
                         <div className="h-12 w-12 bg-orange-100 rounded-lg flex items-center justify-center">
                             <div className="h-3 w-3 bg-orange-500 rounded-full"></div>
@@ -219,34 +229,40 @@ export default function UsersPage() {
                 />
                 <select
                     value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value as typeof roleFilter)}
+                    onChange={(e) => handleRoleChange(e.target.value)}
                     className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                     <option value="all">Todos los roles</option>
-                    <option value="coordinador">Coordinador</option>
-                    <option value="conductor">Conductor</option>
-                    <option value="remitente">Remitente</option>
+                    <option value="coord">Coordinador</option>
+                    <option value="driver">Conductor</option>
+                    <option value="admin">Administrador</option>
                 </select>
             </div>
 
             <div className="space-y-4">
-                <Table
-                    columns={columns}
-                    data={tableRows}
-                    getRowKey={(row) => row.id}
-                    emptyState="No se encontraron usuarios"
-                />
+                {isLoading ? (
+                    <div className="text-center py-8">Cargando usuarios...</div>
+                ) : isError ? (
+                    <div className="text-center py-8 text-red-600">Error al cargar usuarios</div>
+                ) : (
+                    <>
+                        <Table
+                            columns={columns}
+                            data={tableRows}
+                            getRowKey={(row) => row.id}
+                            emptyState="No se encontraron usuarios"
+                        />
 
-                <TablePagination
-                    page={page}
-                    pageSize={pageSize}
-                    totalItems={totalItems}
-                    onPageChange={setPage}
-                    onPageSizeChange={(size) => {
-                        setPageSize(size);
-                        resetPage();
-                    }}
-                />
+                        <TablePagination
+                            page={page}
+                            pageSize={pageSize}
+                            totalItems={totalItems}
+                            totalPages={totalPages}
+                            onPageChange={handlePageChange}
+                            onPageSizeChange={handlePageSizeChange}
+                        />
+                    </>
+                )}
             </div>
         </div>
     );

@@ -1,14 +1,15 @@
 import { EditUserPage } from "@/modules/dashboard/users/ui/EditUserPage";
 
 interface EditUserRouteProps {
-    params: {
+    params: Promise<{
         id: string;
-    };
+    }>;
 }
 
-export default function EditUserRoute({ params }: EditUserRouteProps) {
-    const userId = parseInt(params.id, 10);
-    
+export default async function EditUserRoute({ params }: EditUserRouteProps) {
+    const { id } = await params;
+    const userId = parseInt(id, 10);
+
     if (isNaN(userId)) {
         return (
             <div className="space-y-8">

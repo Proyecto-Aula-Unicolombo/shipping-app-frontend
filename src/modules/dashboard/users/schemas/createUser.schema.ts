@@ -1,34 +1,72 @@
 import { z } from "zod";
 
-export const createUserSchema = z.object({
-    // User personal information
-    name: z.string().min(1, "El nombre es requerido."),
-    lastName: z.string().min(1, "El apellido es requerido."),
-    email: z.string().email("Ingresa un email válido."),
-    password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres."),
-    confirmPassword: z.string().min(1, "Confirma la contraseña."),
-    role: z.enum(["coordinador", "conductor", "remitente"], {
-        message: "Selecciona un rol válido."
+// Schema base compartido
+const baseUserSchema = z.object({
+    name: z.string().min(1, "El nombre es requerido"),
+    lastName: z.string().min(1, "El apellido es requerido"),
+    email: z.string().email("Email inválido"),
+    role: z.enum(["coord", "driver", "admin"], {
+        message: "Selecciona un rol válido",
     }),
-    
-    // Optional fields based on role
     phoneNumber: z.string().optional(),
     license: z.string().optional(),
-}).refine((data) => data.password === data.confirmPassword, {
-    message: "Las contraseñas no coinciden.",
-    path: ["confirmPassword"],
-}).refine((data) => {
-    // If role is conductor, phoneNumber and license are required
-    if (data.role === "conductor") {
-        return data.phoneNumber && data.phoneNumber.length > 0 && data.license && data.license.length > 0;
-    }
-    return true;
-}, {
-    message: "Los conductores requieren número de teléfono y licencia.",
-    path: ["phoneNumber"],
 });
 
+export const createUserSchema = baseUserSchema
+    .extend({
+        password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres"),
+        confirmPassword: z.string().min(1, "Confirma la contraseña"),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+        message: "Las contraseñas no coinciden",
+        path: ["confirmPassword"],
+    })
+    .refine(
+        (data) => {
+            if (data.role === "driver") {
+                return !!data.phoneNumber && !!data.license;
+            }
+            return true;
+        },
+        {
+            message: "Número de teléfono y licencia son requeridos para conductores",
+            path: ["phoneNumber"],
+        }
+    );
+
+export const updateUserSchema = baseUserSchema
+    .extend({
+        password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").optional().or(z.literal("")),
+        confirmPassword: z.string().optional().or(z.literal("")),
+    })
+    .refine(
+        (data) => {
+            // Solo validar coincidencia si se ingresó una contraseña
+            if (data.password && data.password.length > 0) {
+                return data.password === data.confirmPassword;
+            }
+            return true;
+        },
+        {
+            message: "Las contraseñas no coinciden",
+            path: ["confirmPassword"],
+        }
+    )
+    .refine(
+        (data) => {
+            if (data.role === "driver") {
+                return !!data.phoneNumber && !!data.license;
+            }
+            return true;
+        },
+        {
+            message: "Número de teléfono y licencia son requeridos para conductores",
+            path: ["phoneNumber"],
+        }
+    );
+
 export type CreateUserSchema = z.infer<typeof createUserSchema>;
+export type UpdateUserSchema = z.infer<typeof updateUserSchema>;
 
 export const createUserDefaultValues: CreateUserSchema = {
     name: "",
@@ -36,7 +74,7 @@ export const createUserDefaultValues: CreateUserSchema = {
     email: "",
     password: "",
     confirmPassword: "",
-    role: "coordinador",
+    role: "coord",
     phoneNumber: "",
     license: "",
 };
