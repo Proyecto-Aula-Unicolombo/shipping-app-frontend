@@ -7,9 +7,9 @@ import { packagesMock } from "@/mocks/orders";
 import { 
     FiPackage, 
     FiTruck, 
-    FiChevronRight,
     FiAlertTriangle,
-    FiBox
+    FiBox,
+    FiCheckCircle
 } from "react-icons/fi";
 
 interface DriverPackagesListProps {
@@ -17,6 +17,8 @@ interface DriverPackagesListProps {
 }
 
 export function DriverPackagesList({ driverId = 1 }: DriverPackagesListProps) {
+    const router = useRouter();
+    
     // Get orders for the driver
     const driverOrders = ordersMock.filter(order => order.DriverID === driverId);
     
@@ -24,6 +26,11 @@ export function DriverPackagesList({ driverId = 1 }: DriverPackagesListProps) {
     const driverPackages = packagesMock.filter(pkg => 
         driverOrders.some(order => order.id === pkg.OrderID)
     );
+
+    // Check if package can be delivered (not already delivered)
+    const canBeDelivered = (status: string) => {
+        return !["entregado", "delivered"].includes(status.toLowerCase());
+    };
 
     const getStatusColor = (status: string) => {
         switch (status.toLowerCase()) {
@@ -119,12 +126,26 @@ export function DriverPackagesList({ driverId = 1 }: DriverPackagesListProps) {
                                 )}
 
                                 <div className="mt-3 pt-3 border-t border-slate-100">
-                                    <div className="flex justify-between items-center text-sm">
+                                    <div className="flex justify-between items-center text-sm mb-3">
                                         <span className="text-slate-600">Valor declarado:</span>
                                         <span className="font-medium text-slate-900">
                                             ${pkg.DeclaredValue.toLocaleString()}
                                         </span>
                                     </div>
+                                    
+                                    {/* Botón de entrega solo para paquetes sin entregar */}
+                                    {canBeDelivered(pkg.StartStatus) && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                router.push(ROUTES.driver.confirmDelivery(pkg.id));
+                                            }}
+                                            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors"
+                                        >
+                                            <FiCheckCircle size={16} />
+                                            <span className="font-medium">Confirmar Entrega</span>
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         );

@@ -26,6 +26,8 @@ export const ROUTES = {
         orders: "/conductor/ordenes",
         orderDetail: (orderId: number) => `/conductor/ordenes/${orderId}`,
         packages: "/conductor/paquetes",
+        confirmDelivery: (packageId: number) => `/conductor/paquetes/${packageId}/confirmar-entrega`,
+        tracking: "/conductor/tracking",
         history: "/conductor/historial",
         profile: "/conductor/perfil",
     }

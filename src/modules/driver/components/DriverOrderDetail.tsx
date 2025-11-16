@@ -4,8 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import { ordersMock } from "@/mocks/orders";
 import { packagesMock } from "@/mocks/orders";
 import { ROUTES } from "@/modules/shared/constants/routes";
+import { BackButton } from "@/modules/dashboard/components/BackButton";
+import { PageHeader } from "@/modules/dashboard/components/PageHeader";
 import { 
-    FiArrowLeft,
     FiTruck, 
     FiMapPin, 
     FiClock, 
@@ -67,26 +68,16 @@ export function DriverOrderDetail() {
         <div className="min-h-screen bg-slate-50">
             {/* Mobile Layout */}
             <div className="lg:hidden">
-                {/* Header */}
-                <div className="bg-white border-b border-slate-200 px-4 py-4">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => router.push(ROUTES.driver.orders)}
-                            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                        >
-                            <FiArrowLeft size={20} className="text-slate-600" />
-                        </button>
-                        <div>
-                            <h1 className="text-lg font-semibold text-slate-900">
-                                Orden #{order.id}
-                            </h1>
-                            <p className="text-sm text-slate-600">{order.ClientName}</p>
-                        </div>
+                <div className="p-4">
+                    <div className="flex items-center gap-4 mb-6">
+                        <BackButton />
+                        <PageHeader
+                            title={`Orden #${order.id}`}
+                            description={order.ClientName}
+                        />
                     </div>
-                </div>
 
-                {/* Content */}
-                <div className="p-4 space-y-6">
+                    <div className="space-y-6">
                     {/* Status */}
                     <div className="bg-white rounded-xl p-4">
                         <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-full ${getStatusColor(order.Status)}`}>
@@ -191,6 +182,7 @@ export function DriverOrderDetail() {
                             ))}
                         </div>
                     </div>
+                    </div>
                 </div>
             </div>
 
@@ -199,18 +191,11 @@ export function DriverOrderDetail() {
                 <div className="max-w-6xl mx-auto p-8">
                     {/* Header */}
                     <div className="flex items-center gap-4 mb-8">
-                        <button
-                            onClick={() => router.push(ROUTES.driver.orders)}
-                            className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
-                        >
-                            <FiArrowLeft size={24} className="text-slate-600" />
-                        </button>
-                        <div>
-                            <h1 className="text-2xl font-bold text-slate-900">
-                                Orden #{order.id}
-                            </h1>
-                            <p className="text-slate-600">{order.ClientName}</p>
-                        </div>
+                        <BackButton />
+                        <PageHeader
+                            title={`Orden #${order.id}`}
+                            description={order.ClientName}
+                        />
                         <div className="ml-auto">
                             <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${getStatusColor(order.Status)}`}>
                                 <FiTruck size={18} />

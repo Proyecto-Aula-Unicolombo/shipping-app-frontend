@@ -243,7 +243,7 @@ export const packagesMock: Package[] = [
     {
         id: 12345,
         NumPakge: 1,
-        StartStatus: "Entregado",
+        StartStatus: "Pendiente",
         DescriptionContent: "Dispositivos electrónicos - Smartphone y accesorios",
         Weight: 2.5,
         Dimention: 0.05,
