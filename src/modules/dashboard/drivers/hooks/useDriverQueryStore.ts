@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CreateDriverSchema } from "../schemas/createDriver.schema";
-import type { DriverListAPIResponse, DriverListItem } from "@/types/drivers";
+import type { DriverDetail, DriverListAPIResponse, DriverListItem } from "@/types/drivers";
 import { DriverListParams, driversRepository } from "../repository/driverRepository";
 
 const DRIVERS_QUERY_KEY = ["drivers"] as const;
@@ -12,10 +12,21 @@ interface UseDriverQueryStoreOptions {
     driverId?: number | null;
 }
 
+interface UpdateDriverStatus {
+    id: number;
+    status: boolean;
+}
+
 const fetchDrivers = async (params?: DriverListParams): Promise<DriverListAPIResponse> => {
     const res = await driversRepository.list(params);
     return res;
 };
+
+const fetchDriverById = async (id: number): Promise<DriverDetail> => {
+    const res = await driversRepository.get(String(id));
+    console.log("driver data:" + res)
+    return (res as unknown) as DriverDetail;
+}
 
 const createDriverAPI = async (data: CreateDriverSchema): Promise<DriverListItem> => {
     const payload: any = {
@@ -29,6 +40,11 @@ const createDriverAPI = async (data: CreateDriverSchema): Promise<DriverListItem
     const res = await driversRepository.create(payload);
     return (res as unknown) as DriverListItem;
 };
+
+const updateDriverStatus = async (pyl: UpdateDriverStatus): Promise<DriverListItem> => {
+    const res = await driversRepository.updateStatus(pyl.id, pyl.status);
+    return (res as unknown) as DriverListItem;
+}
 
 
 
@@ -44,6 +60,13 @@ export function useDriverQueryStore(options?: UseDriverQueryStoreOptions) {
         placeholderData: (previousData) => previousData
     });
 
+    const driverDetailQuery = useQuery({
+        queryKey: DRIVERS_DETAIL_QUERY_KEY(driverId!),
+        queryFn: () => fetchDriverById(driverId!),
+        enabled: driverId !== null && driverId !== undefined && driverId > 0,
+        staleTime: 0,
+    });
+
     // Mutation for creating a new driver
     const createDriverMutation = useMutation({
         mutationFn: createDriverAPI,
@@ -55,6 +78,23 @@ export function useDriverQueryStore(options?: UseDriverQueryStoreOptions) {
         },
     });
 
+    const updateDriverStatusMutation = useMutation({
+        mutationFn: updateDriverStatus,
+        onSuccess: (_,variables) => {
+            queryClient.invalidateQueries({
+                queryKey: [DRIVERS_QUERY_KEY],
+            });
+
+            queryClient.invalidateQueries({
+                queryKey: [DRIVERS_DETAIL_QUERY_KEY(variables.id)],
+                
+            });
+        },
+        onError: (error) => {
+            console.error("Error updating status:", error);
+            throw error;
+        }
+    });
 
     return {
         // Query data
@@ -66,12 +106,23 @@ export function useDriverQueryStore(options?: UseDriverQueryStoreOptions) {
         isError: driversQuery.isError,
         error: driversQuery.error,
 
+        // Query detail
+        driverDetail: driverDetailQuery.data,
+        isLoadingDetail: driverDetailQuery.isLoading,
+        isErrorDetail: driverDetailQuery.isError,
+        errorDetail: driverDetailQuery.error,
+
         // Mutation data
         createDriver: createDriverMutation.mutate,
         createDriverAsync: createDriverMutation.mutateAsync,
         isCreating: createDriverMutation.isPending,
         createError: createDriverMutation.error,
 
+        // Mutation Update
+        updateStatusDriver: updateDriverStatusMutation.mutate,
+        updateStatusDriverAsync: updateDriverStatusMutation.mutateAsync,
+        isUpdatingStatus: updateDriverStatusMutation.isPending,
+        updateStatusError: updateDriverStatusMutation.error,
 
         // Utility functions
         refetch: driversQuery.refetch,

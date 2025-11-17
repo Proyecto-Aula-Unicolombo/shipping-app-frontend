@@ -5,10 +5,10 @@ import Image from "next/image";
 import { PageHeader } from "../../components/PageHeader";
 import { Button } from "@/modules/shared/ui/Button";
 import { useDriverQueryStore } from "../../drivers/hooks/useDriverQueryStore";
-import { useOrderQueryStore } from "../../orders/hooks/useOrderQueryStore";
-import type { DriverDetail } from "@/mocks/drivers";
-import type { OrderListItem } from "@/mocks/orders";
 import { BackButton } from "../../components/BackButton";
+import { DriverDetail } from "@/types/drivers";
+import { useRouter } from "next/navigation";
+import { ROUTES } from "@/modules/shared/constants/routes";
 
 type DriverDetailPageProps = {
     driver: DriverDetail;
@@ -20,27 +20,25 @@ const STATUS_STYLES = {
 } as const;
 
 export function DriverDetailPage({ driver: initialDriver }: DriverDetailPageProps) {
-    const { drivers, updateDriverStatusAsync, isUpdatingStatus, updateStatusError } = useDriverQueryStore();
-    
-    // Get the current driver from the store to ensure we have the latest status
-    const driver = useMemo(() => {
-        const currentDriver = drivers.find(d => d.id === initialDriver.id);
-        return currentDriver ? { ...initialDriver, status: currentDriver.status } : initialDriver;
-    }, [drivers, initialDriver]);
-    
+    const { updateStatusDriverAsync, isUpdatingStatus, updateStatusError } = useDriverQueryStore();
+    const router = useRouter();
+
     const avatarUrl = useMemo(() => {
         const randomIndex = Math.floor(Math.random() * 90);
         return `https://randomuser.me/api/portraits/men/${randomIndex}.jpg`;
     }, []);
 
     const handleStatusToggle = useCallback(async () => {
-        const newStatus = driver.status === "Activo" ? "Inactivo" : "Activo";
-        try {
-            await updateDriverStatusAsync({ id: driver.id, status: newStatus });
+        const newStatus = !initialDriver.IsActive; try {
+            await updateStatusDriverAsync({ id: initialDriver.ID, status: newStatus });
+            router.push(ROUTES.dashboard.drivers);
         } catch (error) {
             console.error("Failed to update driver status:", error);
         }
-    }, [driver.id, driver.status, updateDriverStatusAsync]);
+    }, [initialDriver.ID, initialDriver.IsActive, updateStatusDriverAsync]);
+
+    const statusText = initialDriver.IsActive ? "Activo" : "Inactivo";
+
 
     return (
         <div className="space-y-8">
@@ -58,7 +56,7 @@ export function DriverDetailPage({ driver: initialDriver }: DriverDetailPageProp
                     <div className="relative h-32 w-32 overflow-hidden rounded-full border border-slate-200">
                         <Image
                             src={avatarUrl}
-                            alt={`Avatar de ${driver.User.Name} ${driver.User.LastName}`}
+                            alt={`Avatar de ${initialDriver.Name} ${initialDriver.LastName}`}
                             fill
                             sizes="128px"
                             className="object-cover"
@@ -66,25 +64,25 @@ export function DriverDetailPage({ driver: initialDriver }: DriverDetailPageProp
                     </div>
                     <div className="space-y-1">
                         <h2 className="text-xl font-semibold text-slate-900">
-                            {driver.User.Name} {driver.User.LastName}
+                            {initialDriver.Name} {initialDriver.LastName}
                         </h2>
-                        <p className="text-sm text-slate-500">ID del Conductor: {driver.id}</p>
+                        <p className="text-sm text-slate-500">ID del Conductor: {initialDriver.ID}</p>
                         <div className="flex items-center gap-3">
                             <span
-                                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[driver.status]}`}
+                                className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[statusText as keyof typeof STATUS_STYLES]}`}
                             >
-                                {driver.status}
+                                {statusText}
                             </span>
                             <Button
-                                variant={driver.status === "Activo" ? "secondary" : "primary"}
+                                variant={initialDriver.IsActive ? "secondary" : "primary"}
                                 onClick={handleStatusToggle}
                                 disabled={isUpdatingStatus}
                                 className="text-xs px-3 py-1"
                             >
-                                {isUpdatingStatus 
-                                    ? "Actualizando..." 
-                                    : driver.status === "Activo" 
-                                        ? "Desactivar" 
+                                {isUpdatingStatus
+                                    ? "Actualizando..."
+                                    : initialDriver.IsActive
+                                        ? "Desactivar"
                                         : "Activar"
                                 }
                             </Button>
@@ -100,52 +98,26 @@ export function DriverDetailPage({ driver: initialDriver }: DriverDetailPageProp
                                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                     Número de Teléfono
                                 </p>
-                                <p className="text-sm text-slate-700">{driver.PhoneNumber}</p>
+                                <p className="text-sm text-slate-700">{initialDriver.PhoneNumber}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Licencia</p>
-                                <p className="text-sm text-slate-700">{driver.License}</p>
+                                <p className="text-sm text-slate-700">{initialDriver.NumLicence}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                     Correo Electrónico
                                 </p>
-                                <p className="text-sm text-slate-700">{driver.User.Email}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                    Dirección
-                                </p>
-                                <p className="text-sm text-slate-700">{driver.Address}</p>
+                                <p className="text-sm text-slate-700">{initialDriver.Email}</p>
                             </div>
                         </div>
                     </section>
 
-                    <section className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-slate-900">Asignaciones de Vehículos</h3>
-                        </div>
-                        
-                        <div className="rounded-xl border border-slate-200 p-6 text-center">
-                            <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-blue-100 rounded-full">
-                                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </div>
-                            <p className="text-sm text-slate-500 mb-4">
-                                Los vehículos ahora se asignan a través de las órdenes de entrega
-                            </p>
-                            <p className="text-xs text-slate-500">
-                                Para ver las asignaciones de vehículos de este conductor, revise las{" "}
-                                <span className="font-medium text-slate-700">Órdenes Asignadas</span> más abajo
-                            </p>
-                        </div>
-                    </section>
 
                     {/* Assigned Orders Section */}
                     <section className="space-y-4">
-                        <h3 className="text-lg font-semibold text-slate-900">Órdenes Asignadas</h3>
-                        <AssignedOrdersList driverId={driver.id} />
+                        <h3 className="text-lg font-semibold text-slate-900">Órden Asignada</h3>
+                        <AssignedOrderInfo driver={initialDriver} />
                     </section>
                 </div>
             </section>
@@ -154,7 +126,7 @@ export function DriverDetailPage({ driver: initialDriver }: DriverDetailPageProp
             {updateStatusError && (
                 <div className="rounded-lg bg-red-50 p-4">
                     <p className="text-sm text-red-700">
-                        Error al actualizar estado: {updateStatusError instanceof Error ? updateStatusError.message : "Error desconocido"}
+                        Error al actualizar estado
                     </p>
                 </div>
             )}
@@ -162,46 +134,101 @@ export function DriverDetailPage({ driver: initialDriver }: DriverDetailPageProp
     );
 }
 
-// Component to show assigned orders for a driver
-function AssignedOrdersList({ driverId }: { driverId: number }) {
-    const { getOrdersByDriverId } = useOrderQueryStore();
-    
-    const assignedOrders = useMemo(() => {
-        return getOrdersByDriverId(driverId);
-    }, [driverId, getOrdersByDriverId]);
+function AssignedOrderInfo({ driver }: { driver: DriverDetail }) {
+    const router = useRouter();
+    const hasOrder = driver.NumOrder && driver.NumOrder > 0;
 
-    if (assignedOrders.length === 0) {
-        return (
-            <div className="rounded-xl border border-slate-200 p-6 text-center">
-                <p className="text-sm text-slate-500">No hay órdenes asignadas a este conductor</p>
-            </div>
-        );
-    }
+    const getStatusConfig = (status?: string) => {
+        const normalizedStatus = status?.toLowerCase().replace(/\s+/g, '_');
+
+        switch (normalizedStatus) {
+            case 'en_camino':
+            case 'en camino':
+                return {
+                    label: 'En Camino',
+                    color: 'bg-blue-50 text-blue-700 border-blue-200',
+                    icon: '🚚'
+                };
+            case 'entregado':
+                return {
+                    label: 'Entregado',
+                    color: 'bg-green-50 text-green-700 border-green-200',
+                    icon: '✅'
+                };
+            case 'pendiente':
+                return {
+                    label: 'Pendiente',
+                    color: 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                    icon: '⏳'
+                };
+            case 'cancelado':
+                return {
+                    label: 'Cancelado',
+                    color: 'bg-red-50 text-red-700 border-red-200',
+                    icon: '❌'
+                };
+            default:
+                return {
+                    label: status || 'Sin estado',
+                    color: 'bg-slate-50 text-slate-600 border-slate-200',
+                    icon: '📦'
+                };
+        }
+    };
+
+    const statusConfig = hasOrder ? getStatusConfig(driver.OrderStatus) : null;
 
     return (
-        <div className="space-y-3">
-            {assignedOrders.map((order: OrderListItem) => (
-                <div key={order.id} className="rounded-xl border border-slate-200 p-4">
-                    <div className="flex items-center justify-between">
-                        <div className="space-y-1">
-                            <p className="font-medium text-slate-900">Orden #{order.id}</p>
-                            <p className="text-sm text-slate-600">{order.ClientName}</p>
-                            <p className="text-xs text-slate-500">{order.DeliveryAddress}</p>
-                        </div>
-                        <div className="text-right">
-                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
-                                order.Status === "Entregado" 
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : order.Status === "En camino"
-                                    ? "bg-blue-50 text-blue-700"
-                                    : "bg-amber-50 text-amber-600"
-                            }`}>
-                                {order.Status}
+        <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-6">
+            <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-3">
+                        <h4 className="text-sm font-semibold text-slate-900">
+                            Orden Activa
+                        </h4>
+                        {hasOrder && statusConfig && (
+                            <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium border ${statusConfig.color}`}>
+                                <span>{statusConfig.icon}</span>
+                                {statusConfig.label}
                             </span>
-                        </div>
+                        )}
+                        {!hasOrder && (
+                            <span className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                                Sin asignar
+                            </span>
+                        )}
                     </div>
+
+                    {hasOrder ? (
+                        <div className="flex items-baseline gap-2">
+                            <p className="text-3xl font-bold text-slate-900">
+                                #{driver.NumOrder}
+                            </p>
+                        </div>
+                    ) : (
+                        <p className="text-2xl font-bold text-slate-400">N/A</p>
+                    )}
                 </div>
-            ))}
+
+                {hasOrder && (
+                    <Button variant="secondary" className="gap-1.5 size-max" onClick={() => router.push(ROUTES.dashboard.orderDetail(driver.NumOrder!))}>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Ver detalles
+                    </Button>
+                )}
+            </div>
+
+            {!hasOrder && (
+                <div className="flex items-center gap-2 text-sm text-slate-500 pt-2 border-t border-slate-100">
+                    <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>El conductor está disponible para nuevas asignaciones</span>
+                </div>
+            )}
         </div>
     );
 }
