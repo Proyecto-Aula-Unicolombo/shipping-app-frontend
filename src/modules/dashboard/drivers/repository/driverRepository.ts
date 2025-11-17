@@ -37,4 +37,9 @@ export const driversRepository = {
     const res = await api.post('/drivers', payload);
     return res.data;
   },
+
+  updateStatus: async (id: number, status: boolean): Promise<Driver> => {
+    const res = await api.patch(`/drivers/${id}/status`, { is_active: status });
+    return res.data;
+  }
 };

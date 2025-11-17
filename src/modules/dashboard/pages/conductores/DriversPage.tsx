@@ -11,7 +11,6 @@ import { ROUTES } from "@/modules/shared/constants/routes";
 import { SearchInput } from "@/modules/shared/components/SearchInput";
 import { useDebounce } from "@/modules/shared/hooks/useDebounce";
 import { useDriverQueryStore } from "../../drivers/hooks/useDriverQueryStore";
-import { DriverListItem } from "@/types/drivers";
 
 type DriverStatus = "Activo" | "Inactivo";
 type DriverRow = Record<string, unknown> & {

@@ -10,6 +10,7 @@ export interface DriverListItem {
     NumLicence: string;
     NumOrder?: number;
     IsActive: boolean;
+    OrderStatus?: string;
 
 }
 
