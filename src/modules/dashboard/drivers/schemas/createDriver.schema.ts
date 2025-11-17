@@ -6,7 +6,6 @@ export const createDriverSchema = z.object({
     lastName: z.string().min(1, "El apellido es requerido."),
     phoneNumber: z.string().min(1, "El número de teléfono es requerido."),
     email: z.string().email("Ingresa un email válido."),
-    address: z.string().min(1, "La dirección es requerida."),
     license: z.string().min(1, "La licencia es requerida."),
     
     // Optional vehicle assignment
@@ -20,7 +19,5 @@ export const createDriverDefaultValues: CreateDriverSchema = {
     lastName: "",
     phoneNumber: "",
     email: "",
-    address: "",
     license: "",
-    vehicleId: undefined,
 };

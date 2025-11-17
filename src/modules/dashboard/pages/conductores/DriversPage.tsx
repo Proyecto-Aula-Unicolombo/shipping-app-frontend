@@ -10,11 +10,10 @@ import { TablePagination } from "@/modules/shared/components/table/TablePaginati
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { SearchInput } from "@/modules/shared/components/SearchInput";
 import { useDebounce } from "@/modules/shared/hooks/useDebounce";
-import { usePagination } from "@/modules/shared/hooks/usePagination";
 import { useDriverQueryStore } from "../../drivers/hooks/useDriverQueryStore";
-import type { DriverListItem } from "@/mocks/drivers";
+import { DriverListItem } from "@/types/drivers";
 
-type DriverStatus = DriverListItem["status"];
+type DriverStatus = "Activo" | "Inactivo";
 type DriverRow = Record<string, unknown> & {
     id: number;
     name: string;
@@ -56,47 +55,53 @@ const columns: TableColumn<DriverRow>[] = [
 export default function DriversPage() {
     const router = useRouter();
     const [searchValue, setSearchValue] = useState("");
+    const [pageSize, setPageSize] = useState<5 | 10 | 15>(5);
+    const [page, setPage] = useState(1);
     const debouncedSearchTerm = useDebounce(searchValue, 300);
-    
-    // Use React Query store for drivers data
-    const { drivers, isLoading, isError, error } = useDriverQueryStore();
-    
-    const filteredDrivers = useMemo(() => {
-        const term = debouncedSearchTerm.trim().toLowerCase();
-        if (!term) {
-            return drivers;
-        }
 
-        return drivers.filter((driver) =>
-            [driver.User.Name, driver.User.LastName, driver.lastOrderNumber].some((field) =>
-                field.toLowerCase().includes(term)
-            )
-        );
-    }, [debouncedSearchTerm, drivers]);
 
     const {
-        page,
-        pageSize,
-        offset,
-        setPage,
-        setPageSize,
+        drivers,
         totalItems,
-        resetPage,
-    } = usePagination<5 | 10 | 15>({ totalItems: filteredDrivers.length, initialPageSize: 5 });
+        totalPages,
+        isLoading,
+        isError,
+        error,
+    } = useDriverQueryStore({
+        listParams: {
+            limit: pageSize,
+            page: page,
+            name_or_lastname: debouncedSearchTerm,
+        }
+    });
 
-    const paginatedDrivers = filteredDrivers.slice(offset, offset + pageSize);
-    const tableRows = paginatedDrivers.map<DriverRow>((driver) => ({
-        id: driver.id,
-        name: driver.User.Name,
-        lastName: driver.User.LastName,
-        lastOrderNumber: driver.lastOrderNumber,
-        status: driver.status,
+
+    function getDriverStatus(isActive: boolean): DriverStatus {
+        return isActive ? "Activo" : "Inactivo";
+    }
+
+    const tableRows: DriverRow[] = drivers.map((driver) => ({
+        id: driver.ID,
+        name: driver.Name,
+        lastName: driver.LastName,
+        lastOrderNumber: "#" + (driver.NumOrder ? driver.NumOrder.toString() : "N/A"),
+        status: getDriverStatus(driver.IsActive),
         actions: null,
     }));
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(event.target.value);
-        resetPage();
+        setPage(1);
+    };
+
+      const handlePageSizeChange = (newSize: 5 | 10 | 15) => {
+        setPageSize(newSize);
+        setPage(1);
+    };
+
+    const handlePageChange = (newPage: number) => {
+        const validPage = Math.min(Math.max(1, newPage), totalPages);
+        setPage(validPage);
     };
 
     // Handle loading and error states
@@ -141,7 +146,7 @@ export default function DriversPage() {
                 <SearchInput
                     value={searchValue}
                     onChange={handleSearchChange}
-                    placeholder="Buscar por nombre, apellido o número de orden"
+                    placeholder="Buscar por nombre o apellido"
                 />
 
                 <Table
@@ -155,11 +160,9 @@ export default function DriversPage() {
                     page={page}
                     pageSize={pageSize}
                     totalItems={totalItems}
-                    onPageChange={setPage}
-                    onPageSizeChange={(size) => {
-                        setPageSize(size);
-                        resetPage();
-                    }}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
                 />
             </div>
         </div>

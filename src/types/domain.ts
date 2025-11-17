@@ -21,21 +21,21 @@ export interface User {
 }
 
 export interface Driver {
-    id: number;
+    ID: number;
     phone_number: string;
     num_licence: string;
     UserID?: number;
 }
 
 export interface Vehicle {
-    id: number;
+    ID: number;
     Plate: string;
     Brand: string;
     Model: string;
     Color: string;
     VehicleType: string;
-    driverId?: number; // Foreign key to Driver
-    driverName?: string; // Computed field for display
+    DriverName?: string;
+    DriverLastName?: string;
 }
 
 export interface Orders {

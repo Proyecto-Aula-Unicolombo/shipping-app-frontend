@@ -3,16 +3,16 @@
 import { PageHeader } from "../../components/PageHeader";
 import { VehicleForm } from "../components/VehicleForm";
 import { BackButton } from "@/modules/dashboard/components/BackButton";
-import { getVehicleById } from "@/mocks/vehicles";
+import { useVehicleQueryStore } from "../hooks/useVehicleQueryStore";
 
 interface EditVehiclePageProps {
     vehicleId: number;
 }
 
 export function EditVehiclePage({ vehicleId }: EditVehiclePageProps) {
-    const vehicle = getVehicleById(vehicleId);
+    const { vehicleDetail, isDetailLoading, isDetailError } = useVehicleQueryStore({ vehicleId });
 
-    if (!vehicle) {
+    if (isDetailLoading) {
         return (
             <div className="space-y-8">
                 <div className="flex items-center gap-4">
@@ -26,6 +26,20 @@ export function EditVehiclePage({ vehicleId }: EditVehiclePageProps) {
             </div>
         );
     }
+    if (isDetailError || !vehicleDetail) {
+        return (
+            <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                    <BackButton />
+                    <PageHeader
+                        eyebrow="Vehículos"
+                        title="Cargando..."
+                        description="Obteniendo información del vehículo"
+                    />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8">
@@ -34,12 +48,12 @@ export function EditVehiclePage({ vehicleId }: EditVehiclePageProps) {
                 <PageHeader
                     eyebrow="Vehículos"
                     title="Editar Vehículo"
-                    description={`Modifica la información del vehículo ${vehicle.Plate}`}
+                    description={`Modifica la información del vehículo ${vehicleDetail.Plate}`}
                 />
             </div>
-            
+
             <div className="rounded-2xl border border-slate-200 bg-white p-8">
-                <VehicleForm vehicle={vehicle} mode="edit" />
+                <VehicleForm vehicle={vehicleDetail} mode="edit" />
             </div>
         </div>
     );

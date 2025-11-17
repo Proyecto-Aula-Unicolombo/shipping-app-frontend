@@ -8,8 +8,7 @@ export const createVehicleSchema = z.object({
     color: z.string().min(1, "El color del vehículo es requerido."),
     vehicleType: z.string().min(1, "El tipo de vehículo es requerido."),
     
-    // Optional driver assignment
-    driverId: z.number().optional(),
+   
 });
 
 export type CreateVehicleSchema = z.infer<typeof createVehicleSchema>;
@@ -20,7 +19,6 @@ export const createVehicleDefaultValues: CreateVehicleSchema = {
     model: "",
     color: "",
     vehicleType: "",
-    driverId: undefined,
 };
 
 export const vehicleTypes = [
