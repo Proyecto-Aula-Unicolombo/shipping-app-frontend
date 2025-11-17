@@ -21,7 +21,7 @@ export interface User {
 }
 
 export interface Driver {
-    id: number;
+    ID: number;
     phone_number: string;
     num_licence: string;
     UserID?: number;
