@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { api } from '@/lib/apiClient';
 import {  Vehicle } from '@/types/domain';
 import { CreateVehicleDTO, UpdateVehicleDTO, VehicleListAPIResponse,  } from '@/types/vehicles';
 
@@ -8,10 +8,6 @@ export interface VehicleListParams {
   plate_brand_or_model?: string;
 }
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
 
 export const vehiclesRepository = {
   list: async (params?: VehicleListParams): Promise<VehicleListAPIResponse> => {
