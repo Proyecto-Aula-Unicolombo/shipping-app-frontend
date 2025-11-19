@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createJSONStorage, persist } from 'zustand/middleware';
 import type { AuthState, User } from '@/types/auth';
 
 interface AuthStore extends AuthState {
@@ -39,6 +39,7 @@ export const useAuthStore = create<AuthStore>()(
         }),
         {
             name: 'auth-storage', // Nombre en localStorage
+            storage: createJSONStorage(() => localStorage),
             partialize: (state) => ({
                 token: state.token,
                 user: state.user,
