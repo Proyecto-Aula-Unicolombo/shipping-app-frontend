@@ -1,6 +1,6 @@
 import { api } from '@/lib/apiClient';
 import {  Vehicle } from '@/types/domain';
-import { CreateVehicleDTO, UpdateVehicleDTO, VehicleListAPIResponse,  } from '@/types/vehicles';
+import { CreateVehicleDTO, UpdateVehicleDTO, VehicleListAPIResponse, VehicleLListUnassignedAPIResponse } from '@/types/vehicles';
 
 export interface VehicleListParams {
   page: number;
@@ -20,6 +20,11 @@ export const vehiclesRepository = {
       queryParams.append("plate_brand_or_model", params.plate_brand_or_model.trim());
     }
     const res = await api.get(`/vehicles/?${queryParams.toString()}`);
+    return res.data;
+  },
+  
+  listUnassigned: async (): Promise<VehicleLListUnassignedAPIResponse[]> => {
+    const res = await api.get('/vehicles/unassigned');
     return res.data;
   },
 

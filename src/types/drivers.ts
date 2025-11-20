@@ -50,3 +50,10 @@ export interface UpdateDriverDTO {
     phone_number?: string;
     num_licence?: string;
 }
+
+export interface DriverUnassignedAPIResponse {
+    ID: number;
+    Name: string;
+    LastName: string;
+    License: string;
+}

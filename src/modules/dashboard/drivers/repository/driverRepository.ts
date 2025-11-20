@@ -1,6 +1,6 @@
-import axios from 'axios';
+import { api } from '@/lib/apiClient';
 import { Driver } from '@/types/domain';
-import type { DriverListAPIResponse, CreateDriverDTO } from '@/types/drivers';
+import type { DriverListAPIResponse, CreateDriverDTO , DriverUnassignedAPIResponse} from '@/types/drivers';
 
 export interface DriverListParams {
   page: number;
@@ -9,10 +9,6 @@ export interface DriverListParams {
   role?: string;
 }
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
 
 export const driversRepository = {
   list: async (params?: DriverListParams): Promise<DriverListAPIResponse> => {
@@ -26,6 +22,11 @@ export const driversRepository = {
     }
 
     const res = await api.get(`/drivers/?${queryParams.toString()}`);
+    return res.data;
+  },
+
+  listUnassigned: async (): Promise<DriverUnassignedAPIResponse[]> => {
+    const res = await api.get('/drivers/unassigned');
     return res.data;
   },
 

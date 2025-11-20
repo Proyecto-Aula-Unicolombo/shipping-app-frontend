@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react"
 import Link from "next/link";
 import { PageHeader } from "../../components/PageHeader";
 import { Button } from "@/modules/shared/ui/Button";
@@ -9,157 +9,171 @@ import { TablePagination } from "@/modules/shared/components/table/TablePaginati
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { SearchInput } from "@/modules/shared/components/SearchInput";
 import { useDebounce } from "@/modules/shared/hooks/useDebounce";
-import { usePagination } from "@/modules/shared/hooks/usePagination";
-import { ordersMock } from "@/mocks/orders";
+import { useOrderQueryStore } from "../../orders/hooks/useOrderQueryStore";
+import type { Status, ServiceType } from "@/types/ordersWithPackage";
 
-type OrderStatus = "En camino" | "Entregado" | "Pendiente";
-type ServiceType = "Standard Delivery" | "Express Delivery";
+
 
 type OrderRow = Record<string, unknown> & {
     id: number;
     orderNumber: string;
-    status: OrderStatus;
-    sla: string;
-    eta: string;
+    status: Status;
     serviceType: ServiceType;
-    deliveryAddress: string;
-    clientName: string;
-    contactPhone: string;
     notes?: string;
     actions?: null;
 };
 
-const STATUS_STYLES: Record<OrderStatus, string> = {
-    "En camino": "bg-blue-50 text-blue-700",
-    "Entregado": "bg-emerald-50 text-emerald-700",
-    "Pendiente": "bg-amber-50 text-amber-600",
+const formatStatus = (status: Status): string => {
+    const statusMap: Record<Status, string> = {
+        "pendiente": "Pendiente",
+        "en camino": "En camino",
+        "entregado": "Entregado",
+        "asignada": "Asignada",
+    };
+    return statusMap[status] || status;
+};
+
+const formatServiceType = (serviceType: ServiceType): string => {
+    const serviceMap: Record<ServiceType, string> = {
+        "standard delivery": "Standard Delivery",
+        "express delivery": "Express Delivery",
+    };
+    return serviceMap[serviceType] || serviceType;
+};
+
+
+const STATUS_STYLES: Record<Status, string> = {
+    "en camino": "bg-blue-50 text-blue-700",
+    "entregado": "bg-emerald-50 text-emerald-700",
+    "pendiente": "bg-amber-50 text-amber-600",
+    "asignada": "bg-purple-50 text-purple-700",
 };
 
 const SERVICE_TYPE_STYLES: Record<ServiceType, string> = {
-    "Standard Delivery": "bg-gray-50 text-gray-700",
-    "Express Delivery": "bg-purple-50 text-purple-700",
+    "standard delivery": "bg-gray-100 text-gray-700",
+    "express delivery": "bg-purple-50 text-purple-700",
 };
 
-const columns: TableColumn<OrderRow>[] = [
-    {
-        key: "orderNumber",
-        label: "Orden ID",
-        render: (value: unknown, row: OrderRow) => (
-            <Link href={`${ROUTES.dashboard.orders}/${row.id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
-                Order #{String(value)}
-            </Link>
-        )
-    },
-    {
-        key: "status",
-        label: "Estado",
-        render: (value) => (
-            <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[value as OrderStatus]}`}>
-                {value as string}
-            </span>
-        ),
-    },
-    { key: "sla", label: "SLA", className: "text-sm" },
-    { key: "eta", label: "ETA", className: "text-sm" },
-    {
-        key: "serviceType",
-        label: "Tipo de servicio",
-        render: (value) => (
-            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${SERVICE_TYPE_STYLES[value as ServiceType]}`}>
-                {(value as string).replace(' Delivery', '')}
-            </span>
-        ),
-    },
-    {
-        key: "deliveryAddress",
-        label: "Dirección de entrega",
-        className: "max-w-xs truncate text-sm"
-    },
-    { key: "clientName", label: "Cliente", className: "text-sm" },
-    { key: "contactPhone", label: "Contacto", className: "text-sm" },
-    {
-        key: "notes",
-        label: "Notas",
-        className: "max-w-xs truncate text-sm"
-    },
-];
 
 export default function OrdersPage() {
     const [searchValue, setSearchValue] = useState("");
-    const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
+    const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
     const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceType | "all">("all");
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<5 | 10 | 15>(5);
 
     const debouncedSearchTerm = useDebounce(searchValue, 300);
 
-    const filteredOrders = useMemo(() => {
-        let filtered = ordersMock;
-
-        // Filter by search term
-        const term = debouncedSearchTerm.trim().toLowerCase();
-        if (term) {
-            filtered = filtered.filter((order) =>
-                [
-                    order.id.toString(),
-                    order.ClientName,
-                    order.DeliveryAddress,
-                    order.ContactPhone,
-                    order.Notes || ""
-                ].some((field) => field.toLowerCase().includes(term))
-            );
-        }
-
-        // Filter by status
-        if (statusFilter !== "all") {
-            filtered = filtered.filter((order) => order.Status === statusFilter);
-        }
-
-        // Filter by service type
-        if (serviceTypeFilter !== "all") {
-            filtered = filtered.filter((order) => order.ServiceType === serviceTypeFilter);
-        }
-
-        return filtered;
-    }, [debouncedSearchTerm, statusFilter, serviceTypeFilter]);
-
     const {
-        page,
-        pageSize,
-        offset,
-        setPage,
-        setPageSize,
+        orders,
         totalItems,
-        resetPage,
-    } = usePagination<5 | 10 | 15>({ totalItems: filteredOrders.length, initialPageSize: 5 });
+        totalPages,
+        isLoadingOrders,
+        isErrorOrders,
+    } = useOrderQueryStore({
+        listParams: {
+            limit: pageSize,
+            page: page,
+            order_id: debouncedSearchTerm,
+            type_service: serviceTypeFilter !== "all" ? serviceTypeFilter : undefined,
+            status: statusFilter !== "all" ? statusFilter : undefined,
+        }
+    });
 
-    const paginatedOrders = filteredOrders.slice(offset, offset + pageSize);
-    const tableRows = paginatedOrders.map<OrderRow>((order) => ({
-        id: order.id,
-        orderNumber: order.id.toString(),
-        status: order.Status as OrderStatus,
-        sla: order.SLA,
-        eta: order.ETA,
-        serviceType: order.ServiceType,
-        deliveryAddress: order.DeliveryAddress,
-        clientName: order.ClientName,
-        contactPhone: order.ContactPhone,
-        notes: order.Notes,
+    const tableRows = orders.map<OrderRow>((order) => ({
+        id: order.ID,
+        orderNumber: order.ID.toString(),
+        status: order.Status,
+        serviceType: order.TypeService.toLowerCase().trim() as ServiceType,
+        notes: order.Observation,
         actions: null,
     }));
 
+    const columns: TableColumn<OrderRow>[] = [
+        {
+            key: "orderNumber",
+            label: "Orden ID",
+            render: (value: unknown, row: OrderRow) => (
+                <Link href={`${ROUTES.dashboard.orders}/${row.id}`} className="font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                    Order #{String(value)}
+                </Link>
+            )
+        },
+        {
+            key: "status",
+            label: "Estado",
+            render: (value) => (
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${STATUS_STYLES[value as Status]}`}>
+                    {formatStatus(value as Status)}
+                </span>
+            ),
+        },
+
+        {
+            key: "serviceType",
+            label: "Tipo de servicio",
+            render: (value) => {
+                const serviceType = value as ServiceType;
+                console.log("typeService: " + serviceType)
+                return (
+                    <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${SERVICE_TYPE_STYLES[serviceType]}`}>
+                        {formatServiceType(serviceType)}
+                    </span>
+                );
+            },
+        },
+        {
+            key: "notes",
+            label: "Notas",
+            className: "max-w-xs truncate text-sm"
+        },
+    ];
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(event.target.value);
-        resetPage();
+        setPage(1);
     };
 
     const handleStatusFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        setStatusFilter(event.target.value as OrderStatus | "all");
-        resetPage();
+        setStatusFilter(event.target.value as Status | "all");
+        setPage(1);
     };
 
     const handleServiceTypeFilterChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
         setServiceTypeFilter(event.target.value as ServiceType | "all");
-        resetPage();
+        setPage(1);
     };
+
+    const handlePageSizeChange = (newSize: 5 | 10 | 15) => {
+        setPageSize(newSize);
+        setPage(1);
+    };
+
+    const handlePageChange = (newPage: number) => {
+        const validPage = Math.min(Math.max(1, newPage), totalPages);
+        setPage(validPage);
+    };
+
+    if (isLoadingOrders) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-sm text-slate-600">Cargando órdenes...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (isErrorOrders) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <p className="text-red-600">Error al cargar las órdenes</p>
+                </div>
+            </div>
+        );
+    }
+
 
     return (
         <div className="space-y-8">
@@ -200,9 +214,11 @@ export default function OrdersPage() {
                             className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                             <option value="all">Estado</option>
-                            <option value="En camino">En camino</option>
-                            <option value="Entregado">Entregado</option>
-                            <option value="Pendiente">Pendiente</option>
+                            <option value="en camino">En camino</option>
+                            <option value="entregado">Entregado</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="asignada">Asignada</option>
+
                         </select>
                         <select
                             value={serviceTypeFilter}
@@ -210,8 +226,8 @@ export default function OrdersPage() {
                             className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                             <option value="all">Tipo de servicio</option>
-                            <option value="Standard Delivery">Standard Delivery</option>
-                            <option value="Express Delivery">Express Delivery</option>
+                            <option value="standard delivery">Standard Delivery</option>
+                            <option value="express delivery">Express Delivery</option>
                         </select>
                     </div>
                 </div>
@@ -227,11 +243,9 @@ export default function OrdersPage() {
                     page={page}
                     pageSize={pageSize}
                     totalItems={totalItems}
-                    onPageChange={setPage}
-                    onPageSizeChange={(size) => {
-                        setPageSize(size);
-                        resetPage();
-                    }}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
                 />
             </div>
         </div>

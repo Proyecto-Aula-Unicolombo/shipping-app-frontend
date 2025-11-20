@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CreateVehicleSchema } from "../schemas/createVehicle.schema";
-import { VehicleListItem, VehicleListAPIResponse, VehicleDetail } from "@/types/vehicles";
+import { VehicleListItem, VehicleListAPIResponse, VehicleDetail, VehicleLListUnassignedAPIResponse } from "@/types/vehicles";
 import { vehiclesRepository, VehicleListParams } from "../repository/vehicleRepository";
 
 const VEHICLES_QUERY_KEY = ["vehicles"] as const;
@@ -22,6 +22,11 @@ const fetchVehicles = async (params?: VehicleListParams): Promise<VehicleListAPI
     const resp = await vehiclesRepository.list(params);
     return resp;
 };
+
+const fetchVehiclesUnassigned = async (): Promise<VehicleLListUnassignedAPIResponse[]> => {
+    const resp = await vehiclesRepository.listUnassigned();
+    return resp;
+}
 
 const fetchVehicleById = async (id: number): Promise<VehicleDetail> => {
     const res = await vehiclesRepository.get(String(id));
@@ -61,6 +66,14 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         staleTime: 5 * 60 * 1000, // 5 minutes
         placeholderData: (previousData) => previousData
 
+    });
+
+    const vehiclesUnassignedQuery = useQuery({
+        queryKey: [...VEHICLES_QUERY_KEY, "unassigned"],
+        queryFn: () => fetchVehiclesUnassigned(),
+        staleTime: 5 * 1000, // 5 seconds
+        gcTime: 5 * 60 * 1000, // 5 minutes
+        placeholderData: (previousData) => previousData
     });
 
     const vehicleDetailQuery = useQuery({
@@ -125,6 +138,12 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         isError: vehiclesQuery.isError,
         error: vehiclesQuery.error,
 
+        // Unassigned vehicles data
+        vehiclesUnassigned: vehiclesUnassignedQuery.data || [],
+        isLoadingUnassigned: vehiclesUnassignedQuery.isLoading,
+        isErrorUnassigned: vehiclesUnassignedQuery.isError,
+        errorUnassigned: vehiclesUnassignedQuery.error,
+        
         // detail data
         vehicleDetail: vehicleDetailQuery.data,
         isDetailLoading: vehicleDetailQuery.isLoading,

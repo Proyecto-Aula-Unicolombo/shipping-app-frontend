@@ -1,6 +1,6 @@
-import axios from 'axios';
 import { User } from '@/types/domain';
 import type { UsersListAPIResponse, CreateUserDTO, UpdateUserDTO } from '@/types/users';
+import { api } from '@/lib/apiClient';
 
 export interface UserListParams {
   page: number;
@@ -9,10 +9,6 @@ export interface UserListParams {
   role?: string;
 }
 
-const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
-  headers: { 'Content-Type': 'application/json' },
-});
 
 export const usersRepository = {
   list: async (params?: UserListParams): Promise<UsersListAPIResponse> => {
