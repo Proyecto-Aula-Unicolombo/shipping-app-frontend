@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CreateDriverSchema } from "../schemas/createDriver.schema";
-import type { DriverDetail, DriverListAPIResponse, DriverListItem } from "@/types/drivers";
+import type { DriverDetail, DriverListAPIResponse, DriverListItem, DriverUnassignedAPIResponse } from "@/types/drivers";
 import { DriverListParams, driversRepository } from "../repository/driverRepository";
 
 const DRIVERS_QUERY_KEY = ["drivers"] as const;
@@ -21,6 +21,11 @@ const fetchDrivers = async (params?: DriverListParams): Promise<DriverListAPIRes
     const res = await driversRepository.list(params);
     return res;
 };
+
+const fectchDriversUnassigned = async (): Promise<DriverUnassignedAPIResponse[]> => {
+    const res = await driversRepository.listUnassigned();
+    return res;
+}
 
 const fetchDriverById = async (id: number): Promise<DriverDetail> => {
     const res = await driversRepository.get(String(id));
@@ -57,6 +62,14 @@ export function useDriverQueryStore(options?: UseDriverQueryStoreOptions) {
         queryKey: [DRIVERS_QUERY_KEY, listParams],
         queryFn: () => fetchDrivers(listParams),
         staleTime: 5 * 60 * 1000, // 5 minutes
+        placeholderData: (previousData) => previousData
+    });
+
+    const fectchDriverUnassignedQuery = useQuery({
+        queryKey: [...DRIVERS_QUERY_KEY, "unassigned"],
+        queryFn: () => fectchDriversUnassigned(),
+        staleTime: 5 * 1000,
+        gcTime: 5 * 60 * 1000,
         placeholderData: (previousData) => previousData
     });
 
@@ -105,6 +118,12 @@ export function useDriverQueryStore(options?: UseDriverQueryStoreOptions) {
         isLoading: driversQuery.isLoading,
         isError: driversQuery.isError,
         error: driversQuery.error,
+
+        // Unassigned drivers
+        driversUnassigned: fectchDriverUnassignedQuery.data || [],
+        isLoadingUnassigned: fectchDriverUnassignedQuery.isLoading,
+        isErrorUnassigned: fectchDriverUnassignedQuery.isError,
+        errorUnassigned: fectchDriverUnassignedQuery.error,
 
         // Query detail
         driverDetail: driverDetailQuery.data,

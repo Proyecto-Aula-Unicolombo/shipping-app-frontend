@@ -35,3 +35,12 @@ export interface UpdateVehicleDTO {
     color?: string;
     vehicle_type?: string;
 }
+
+
+export interface VehicleLListUnassignedAPIResponse { 
+    ID: number;
+    Plate: string;
+    Brand: string;
+    Model: string;
+    VehicleType: string;
+}
