@@ -33,7 +33,7 @@ const formatStatus = (status: Status): string => {
     return statusMap[status] || status;
 };
 
-const formatServiceType = (serviceType: ServiceType): string => {
+export const formatServiceType = (serviceType: ServiceType): string => {
     const serviceMap: Record<ServiceType, string> = {
         "standard delivery": "Standard Delivery",
         "express delivery": "Express Delivery",
@@ -49,7 +49,7 @@ const STATUS_STYLES: Record<Status, string> = {
     "asignada": "bg-purple-50 text-purple-700",
 };
 
-const SERVICE_TYPE_STYLES: Record<ServiceType, string> = {
+export const SERVICE_TYPE_STYLES: Record<ServiceType, string> = {
     "standard delivery": "bg-gray-100 text-gray-700",
     "express delivery": "bg-purple-50 text-purple-700",
 };

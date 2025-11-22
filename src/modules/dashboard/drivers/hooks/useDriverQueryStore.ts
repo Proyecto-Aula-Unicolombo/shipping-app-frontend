@@ -68,7 +68,7 @@ export function useDriverQueryStore(options?: UseDriverQueryStoreOptions) {
     const fectchDriverUnassignedQuery = useQuery({
         queryKey: [...DRIVERS_QUERY_KEY, "unassigned"],
         queryFn: () => fectchDriversUnassigned(),
-        staleTime: 5 * 1000,
+        staleTime: 2 * 60 * 1000,
         gcTime: 5 * 60 * 1000,
         placeholderData: (previousData) => previousData
     });
@@ -93,14 +93,14 @@ export function useDriverQueryStore(options?: UseDriverQueryStoreOptions) {
 
     const updateDriverStatusMutation = useMutation({
         mutationFn: updateDriverStatus,
-        onSuccess: (_,variables) => {
+        onSuccess: (_, variables) => {
             queryClient.invalidateQueries({
                 queryKey: [DRIVERS_QUERY_KEY],
             });
 
             queryClient.invalidateQueries({
                 queryKey: [DRIVERS_DETAIL_QUERY_KEY(variables.id)],
-                
+
             });
         },
         onError: (error) => {

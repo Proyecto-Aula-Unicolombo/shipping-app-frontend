@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { PageHeader } from "../../components/PageHeader";
 import { Button } from "@/modules/shared/ui/Button";
@@ -8,32 +8,29 @@ import { Table, type TableColumn } from "@/modules/shared/components/table/Table
 import { TablePagination } from "@/modules/shared/components/table/TablePagination";
 import { SearchInput } from "@/modules/shared/components/SearchInput";
 import { useDebounce } from "@/modules/shared/hooks/useDebounce";
-import { usePagination } from "@/modules/shared/hooks/usePagination";
-import { getUnassignedOrders } from "@/mocks/orders";
+
 import { BackButton } from "../../components/BackButton";
+import { useOrderQueryStore } from "../../orders/hooks/useOrderQueryStore";
+import type { ServiceType } from "@/types/ordersWithPackage";
+import { formatServiceType, SERVICE_TYPE_STYLES } from "@/modules/dashboard/pages/ordenes/OrdersPage";
 
 type UnassignedOrderRow = Record<string, unknown> & {
     id: number;
     orderId: string;
-    clientName: string;
-    deliveryAddress: string;
     status: string;
+    typeService: string;
     actions?: null;
 };
 
+
+
 const columns: TableColumn<UnassignedOrderRow>[] = [
-    { 
-        key: "orderId", 
+    {
+        key: "orderId",
         label: "Orden ID",
         render: (value: unknown) => (
             <span className="font-medium text-slate-900">{String(value)}</span>
         )
-    },
-    { key: "clientName", label: "Nombre de cliente" },
-    { 
-        key: "deliveryAddress", 
-        label: "Dirección de entrega",
-        className: "max-w-xs"
     },
     {
         key: "status",
@@ -43,6 +40,19 @@ const columns: TableColumn<UnassignedOrderRow>[] = [
                 {value as string}
             </span>
         ),
+    },
+    {
+        key: "typeService",
+        label: "Tipo de servicio",
+        render: (value) => {
+            const serviceType = value as ServiceType;
+
+            return (
+                <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${SERVICE_TYPE_STYLES[serviceType]}`}>
+                    {formatServiceType(serviceType)}
+                </span>
+            );
+        },
     },
     {
         key: "actions",
@@ -59,49 +69,70 @@ const columns: TableColumn<UnassignedOrderRow>[] = [
 
 export default function UnassignedOrdersPage() {
     const [searchValue, setSearchValue] = useState("");
-    const debouncedSearchTerm = useDebounce(searchValue, 300);
-    
-    const unassignedOrders = getUnassignedOrders();
-    
-    const filteredOrders = useMemo(() => {
-        const term = debouncedSearchTerm.trim().toLowerCase();
-        if (!term) {
-            return unassignedOrders;
-        }
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState<5 | 10 | 15>(5);
 
-        return unassignedOrders.filter((order) =>
-            [
-                order.id.toString(),
-                order.ClientName,
-                order.DeliveryAddress,
-            ].some((field) => field.toLowerCase().includes(term))
-        );
-    }, [debouncedSearchTerm, unassignedOrders]);
+    const debouncedSearchTerm = useDebounce(searchValue, 300);
 
     const {
-        page,
-        pageSize,
-        offset,
-        setPage,
-        setPageSize,
-        totalItems,
-        resetPage,
-    } = usePagination<5 | 10 | 15>({ totalItems: filteredOrders.length, initialPageSize: 5 });
+        ordersUnassigned,
+        totalItemsUnassigned,
+        totalPagesUnassigned,
+        isLoadingOrdersUnassigned,
+        isErrorOrdersUnassigned,
+    } = useOrderQueryStore({
+        listParams: {
+            limit: pageSize,
+            page: page,
+            order_id: debouncedSearchTerm,
+        }
+    });
 
-    const paginatedOrders = filteredOrders.slice(offset, offset + pageSize);
-    const tableRows = paginatedOrders.map<UnassignedOrderRow>((order) => ({
-        id: order.id,
-        orderId: `ORD-2023-${order.id.toString().padStart(3, '0')}`,
-        clientName: order.ClientName,
-        deliveryAddress: order.DeliveryAddress,
+
+    const tableRows = ordersUnassigned.map<UnassignedOrderRow>((order) => ({
+        id: order.ID,
+        orderId: `ORD-#-${order.ID.toString().padStart(3, '0')}`,
+        typeService: order.TypeService,
         status: order.Status,
         actions: null,
     }));
 
     const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         setSearchValue(event.target.value);
-        resetPage();
+        setPage(1);
     };
+
+
+    const handlePageSizeChange = (newSize: 5 | 10 | 15) => {
+        setPageSize(newSize);
+        setPage(1);
+    };
+
+    const handlePageChange = (newPage: number) => {
+        const validPage = Math.min(Math.max(1, newPage), totalPagesUnassigned);
+        setPage(validPage);
+    };
+
+    if (isLoadingOrdersUnassigned) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-sm text-slate-600">Cargando órdenes...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (isErrorOrdersUnassigned) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <p className="text-red-600">Error al cargar las órdenes</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8">
@@ -113,15 +144,16 @@ export default function UnassignedOrdersPage() {
                 </div>
             </div>
 
+
             <div className="space-y-6">
                 <div className="bg-white rounded-2xl border border-slate-200 p-6">
                     <h3 className="text-lg font-semibold text-slate-900 mb-4">Ordenes Disponibles</h3>
-                    
+
                     <div className="space-y-4">
                         <SearchInput
                             value={searchValue}
                             onChange={handleSearchChange}
-                            placeholder="Buscar por ID de orden, cliente o dirección..."
+                            placeholder="Buscar por ID de orden"
                         />
 
                         <Table
@@ -134,12 +166,9 @@ export default function UnassignedOrdersPage() {
                         <TablePagination
                             page={page}
                             pageSize={pageSize}
-                            totalItems={totalItems}
-                            onPageChange={setPage}
-                            onPageSizeChange={(size) => {
-                                setPageSize(size);
-                                resetPage();
-                            }}
+                            totalItems={totalItemsUnassigned}
+                            onPageChange={handlePageChange}
+                            onPageSizeChange={handlePageSizeChange}
                         />
                     </div>
                 </div>

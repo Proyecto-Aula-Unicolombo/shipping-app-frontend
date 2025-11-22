@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo, useCallback, startTransition } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { PageHeader } from "../../components/PageHeader";
 import { BackButton } from "../../components/BackButton";
@@ -10,39 +10,90 @@ import { Select } from "@/modules/shared/ui/Select";
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { useDriverQueryStore } from "../../drivers/hooks/useDriverQueryStore";
 import { useVehicleQueryStore } from "../../vehicles/hooks/useVehicleQueryStore";
-import { getUnassignedOrders } from "@/mocks/orders";
+import { useOrderQueryStore } from "../../orders/hooks/useOrderQueryStore";
+import { toast } from "sonner";
+import { AssignmentSummary } from "../../orders/components/AssignmentSummary";
+import { DriverCombobox } from "../../orders/components/DriverCombobox";
+import { VehicleCombobox } from "../../orders/components/VehicleComboBox";
 
 
 export default function AssignDriverPage() {
     const params = useParams();
     const router = useRouter();
     const orderId = params.orderId as string;
-    
+
     const [selectedDriverId, setSelectedDriverId] = useState<number | undefined>(undefined);
     const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
-    
+
     // Get drivers and vehicles from hooks
-    const { drivers } = useDriverQueryStore();
-    const { vehicles } = useVehicleQueryStore();
-    
-    // Find the order being assigned
-    const unassignedOrders = getUnassignedOrders();
-    const currentOrder = unassignedOrders.find(order => order.id.toString() === orderId);
-    
-    // Filter available drivers (only active ones)
-    const availableDrivers = drivers.filter(driver => driver.status === "Activo");
-    const availableVehicles = vehicles;
+    const {
+        driversUnassigned,
+        isLoadingUnassigned: isLoadingDrivers,
+        isErrorUnassigned: isErrorDrivers,
+    } = useDriverQueryStore();
+
+    const {
+        vehiclesUnassigned,
+        isLoadingUnassigned: isLoadingVehicles,
+        isErrorUnassigned: isErrorVehicles,
+    } = useVehicleQueryStore();
+
+    // Get order details and assign mutation
+    const {
+        orderDetail,
+        isLoadingOrderDetail,
+        assignOrder,
+        isAssigning,
+    } = useOrderQueryStore({ orderrId: Number(orderId) });
+
+    // Memoize available drivers and vehicles to prevent unnecessary re-renders
+    const availableDrivers = useMemo(() => driversUnassigned || [], [driversUnassigned]);
+    const availableVehicles = useMemo(() => vehiclesUnassigned || [], [vehiclesUnassigned]);
+
+    // Memoize selected driver and vehicle to avoid repeated .find() calls
+    const selectedDriver = useMemo(
+        () => availableDrivers.find(d => d.ID === selectedDriverId),
+        [availableDrivers, selectedDriverId]
+    );
+
+    const selectedVehicle = useMemo(
+        () => availableVehicles.find(v => v.ID === selectedVehicleId),
+        [availableVehicles, selectedVehicleId]
+    );
 
 
-    const handleConfirmAssignment = () => {
-        if (selectedDriverId && selectedVehicleId) {
-            const selectedDriver = availableDrivers.find(d => d.id === selectedDriverId);
-            const selectedVehicle = availableVehicles.find(v => v.id === selectedVehicleId);
-            console.log(`Asignando orden ${orderId} al conductor ${selectedDriver?.User.Name} ${selectedDriver?.User.LastName} con vehículo ${selectedVehicle?.Plate}`);
-            // Here you would typically make an API call to assign the order with both driver and vehicle
-            router.push(ROUTES.dashboard.orders);
+    const handleDriverChange = useCallback((value: number | undefined) => {
+        startTransition(() => {
+            setSelectedDriverId(value);
+        });
+    }, []);
+
+    const handleVehicleChange = useCallback((value: number | undefined) => {
+        startTransition(() => {
+            setSelectedVehicleId(value);
+        });
+    }, []);
+
+    const handleConfirmAssignment = useCallback(async () => {
+        if (!selectedDriverId || !selectedVehicleId) {
+            toast.error("Por favor selecciona un conductor y un vehículo");
+            return;
         }
-    };
+
+        try {
+            await assignOrder({
+                orderrId: Number(orderId),
+                driverId: selectedDriverId,
+                vehicleId: selectedVehicleId,
+            });
+
+            toast.success("Orden asignada exitosamente");
+            router.push(ROUTES.dashboard.orders);
+        } catch (error) {
+            console.error("Error asignando orden:", error);
+            toast.error("Error al asignar la orden. Por favor intenta de nuevo.");
+        }
+    }, [selectedDriverId, selectedVehicleId, assignOrder, orderId, router]);
 
     return (
         <div className="space-y-8">
@@ -51,32 +102,34 @@ export default function AssignDriverPage() {
                 <div>
                     <PageHeader eyebrow="Ordenes" title="Asignar Conductor y Vehículo" />
                     <p className="text-sm text-slate-600 mt-1">
-                        {currentOrder 
-                            ? `Asignando orden ORD-2023-${orderId.padStart(3, '0')} para ${currentOrder.ClientName}`
-                            : "Selecciona un conductor y un vehículo para asignar a la orden"
+                        {isLoadingOrderDetail
+                            ? "Cargando información de la orden..."
+                            : orderDetail
+                                ? `Asignando orden #${orderDetail.ID}`
+                                : "Selecciona un conductor y un vehículo para asignar a la orden"
                         }
                     </p>
                 </div>
             </div>
 
             {/* Order Information Card */}
-            {currentOrder && (
+            {orderDetail && (
                 <div className="bg-blue-50 rounded-2xl border border-blue-200 p-6">
                     <h3 className="text-lg font-semibold text-blue-900 mb-4">Información de la Orden</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div>
-                            <label className="block text-sm font-medium text-blue-700 mb-1">Cliente</label>
-                            <p className="text-sm text-blue-900">{currentOrder.ClientName}</p>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-blue-700 mb-1">Dirección de Entrega</label>
-                            <p className="text-sm text-blue-900">{currentOrder.DeliveryAddress}</p>
+                            <label className="block text-sm font-medium text-blue-700 mb-1">ID de Orden</label>
+                            <p className="text-sm text-blue-900">#{orderDetail.ID}</p>
                         </div>
                         <div>
                             <label className="block text-sm font-medium text-blue-700 mb-1">Tipo de Servicio</label>
                             <span className="inline-flex rounded-full px-3 py-1 text-xs font-semibold bg-blue-100 text-blue-800">
-                                {currentOrder.ServiceType}
+                                {orderDetail.TypeService}
                             </span>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-blue-700 mb-1">Paquetes</label>
+                            <p className="text-sm text-blue-900">{orderDetail.Packages?.length || 0} paquete(s)</p>
                         </div>
                     </div>
                 </div>
@@ -85,66 +138,44 @@ export default function AssignDriverPage() {
             <div className="space-y-6">
                 <div className="bg-white rounded-2xl border border-slate-200 p-6">
                     <h3 className="text-lg font-semibold text-slate-900 mb-6">Asignación de Conductor y Vehículo</h3>
-                    
+
                     <div className="grid gap-6 md:grid-cols-2">
                         {/* Driver Selection */}
-                        <FormField
-                            label="Conductor Asignado"
-                            htmlFor="driverId"
-                        >
-                            <Select
-                                id="driverId"
-                                value={selectedDriverId || ""}
-                                onChange={(e) => setSelectedDriverId(e.target.value ? Number(e.target.value) : undefined)}
-                            >
-                                <option value="">Seleccionar conductor</option>
-                                {availableDrivers.map((driver) => (
-                                    <option key={driver.id} value={driver.id}>
-                                        {driver.User.Name} {driver.User.LastName} - {driver.License}
-                                    </option>
-                                ))}
-                            </Select>
-                        </FormField>
+                        <DriverCombobox
+                            drivers={availableDrivers}
+                            value={selectedDriverId}
+                            onChange={handleDriverChange}
+                            isLoading={isLoadingDrivers}
+                        />
 
                         {/* Vehicle Selection */}
-                        <FormField
-                            label="Vehículo Asignado"
-                            htmlFor="vehicleId"
-                        >
-                            <Select
-                                id="vehicleId"
-                                value={selectedVehicleId || ""}
-                                onChange={(e) => setSelectedVehicleId(e.target.value ? Number(e.target.value) : undefined)}
-                            >
-                                <option value="">Seleccionar vehículo</option>
-                                {availableVehicles.map((vehicle) => (
-                                    <option key={vehicle.id} value={vehicle.id}>
-                                        {vehicle.Plate} - {vehicle.Brand} {vehicle.Model} ({vehicle.VehicleType})
-                                    </option>
-                                ))}
-                            </Select>
-                        </FormField>
+                        <VehicleCombobox
+                            vehicles={availableVehicles}
+                            value={selectedVehicleId}
+                            onChange={handleVehicleChange}
+                            isLoading={isLoadingVehicles}
+                        />
+
                     </div>
 
                     {/* Assignment Summary */}
-                    {selectedDriverId && selectedVehicleId && (
-                        <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <h4 className="text-sm font-medium text-green-800 mb-2">Resumen de Asignación</h4>
-                            <div className="text-sm text-green-700">
-                                <p><strong>Conductor:</strong> {availableDrivers.find(d => d.id === selectedDriverId)?.User.Name} {availableDrivers.find(d => d.id === selectedDriverId)?.User.LastName}</p>
-                                <p><strong>Vehículo:</strong> {availableVehicles.find(v => v.id === selectedVehicleId)?.Plate} - {availableVehicles.find(v => v.id === selectedVehicleId)?.Brand} {availableVehicles.find(v => v.id === selectedVehicleId)?.Model}</p>
-                            </div>
-                        </div>
-                    )}
+                    <AssignmentSummary driver={selectedDriver} vehicle={selectedVehicle} />
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-3">
+                    <Button
+                        onClick={() => router.push(ROUTES.dashboard.orders)}
+                        variant="secondary"
+                        disabled={isAssigning}
+                    >
+                        Cancelar
+                    </Button>
                     <Button
                         onClick={handleConfirmAssignment}
-                        disabled={!selectedDriverId || !selectedVehicleId}
+                        disabled={!selectedDriverId || !selectedVehicleId || isAssigning}
                         className="min-w-[120px]"
                     >
-                        Confirmar Asignación
+                        {isAssigning ? "Asignando..." : "Confirmar Asignación"}
                     </Button>
                 </div>
             </div>

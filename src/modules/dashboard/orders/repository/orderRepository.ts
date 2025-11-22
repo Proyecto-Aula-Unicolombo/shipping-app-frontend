@@ -14,8 +14,8 @@ export interface OrderListParams {
 export const ordersRepository = {
     list: async (params?: OrderListParams): Promise<OrdersListAPIResponse> => {
         const queryParams = new URLSearchParams({
-            limit: params?.limit.toString() || "10",
-            page: params?.page.toString() || "1",
+            limit: (params?.limit ?? 10).toString(),
+            page: (params?.page ?? 1).toString(),
         });
 
         if (params?.type_service && params.type_service.trim()) {
@@ -36,12 +36,30 @@ export const ordersRepository = {
         const res = await api.get(`/orders/${id}`);
         return res.data;
     },
+
+    listOrdersUnassigned: async (params?: OrderListParams): Promise<OrdersListAPIResponse> => {
+        const queryParams = new URLSearchParams({
+            limit: (params?.limit ?? 10).toString(),
+            page: (params?.page ?? 1).toString(),
+        });
+
+        if (params?.order_id) {
+            queryParams.append("order_id", params.order_id.toString());
+        }
+        const res = await api.get(`/orders/unassigned/?${queryParams.toString()}`);
+        return res.data;
+    },
     create: async (payload: CreateOrderDTO): Promise<Orders> => {
         const res = await api.post('/orders', payload);
         return res.data;
     },
     update: async (id: string, payload: UpdateOrderDTO): Promise<Orders> => {
         const res = await api.put(`/orders/${id}`, payload);
+        return res.data;
+    },
+
+    assignOrder: async (id: string, driverId: number, vehicleId: number): Promise<Orders> => {
+        const res = await api.put(`/orders/${id}/assign`, { driver_id: driverId, vehicle_id: vehicleId });
         return res.data;
     },
 
