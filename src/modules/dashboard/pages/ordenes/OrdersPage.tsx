@@ -29,6 +29,7 @@ const formatStatus = (status: Status): string => {
         "en camino": "En camino",
         "entregado": "Entregado",
         "asignada": "Asignada",
+        "incidente": "Incidente",
     };
     return statusMap[status] || status;
 };
@@ -47,6 +48,7 @@ const STATUS_STYLES: Record<Status, string> = {
     "entregado": "bg-emerald-50 text-emerald-700",
     "pendiente": "bg-amber-50 text-amber-600",
     "asignada": "bg-purple-50 text-purple-700",
+    "incidente": "bg-red-50 text-red-700",
 };
 
 export const SERVICE_TYPE_STYLES: Record<ServiceType, string> = {

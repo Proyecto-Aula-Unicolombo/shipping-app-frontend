@@ -1,5 +1,5 @@
 
-export type Status = "pendiente" | "en camino" | "entregado" | "asignada";
+export type Status = "pendiente" | "en camino" | "entregado" | "asignada" | "incidente";
 export type ServiceType = "standard delivery" | "express delivery";
 
 export interface OrderListItem {
