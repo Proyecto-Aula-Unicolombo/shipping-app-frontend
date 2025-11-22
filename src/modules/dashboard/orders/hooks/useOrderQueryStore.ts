@@ -12,6 +12,8 @@ const ORDER_DETAIL_QUERY_KEY = (id: number) => ["orders", id] as const;
 interface UseOrderQueryStoreOptions {
     listParams?: OrderListParams;
     orderrId?: number | null;
+    driverId?: number | undefined;
+    vehicleId?: number | undefined;
 }
 
 const fetchOrders = async (params?: OrderListParams): Promise<OrdersListAPIResponse> => {
@@ -24,6 +26,11 @@ const fetchOrderById = async (id: number): Promise<OrderDetailResponse> => {
     return (res as unknown) as OrderDetailResponse;
 }
 
+const fetchOrdersUnassigned = async (params?: OrderListParams): Promise<OrdersListAPIResponse> => {
+    const res = await ordersRepository.listOrdersUnassigned(params);
+    return res;
+}
+
 const createOrderAPI = async (data: CreateOrderSchema): Promise<OrderListItem> => {
     const payload: any = {
         observation: data.notes || "",
@@ -34,6 +41,14 @@ const createOrderAPI = async (data: CreateOrderSchema): Promise<OrderListItem> =
     }
 
     const res = await ordersRepository.create(payload);
+    return (res as unknown) as OrderListItem;
+};
+
+const assignOrderAPI = async (params?: UseOrderQueryStoreOptions): Promise<OrderListItem> => {
+    if (!params?.orderrId || params.driverId === undefined || params.vehicleId === undefined) {
+        throw new Error('Missing required parameters for order assignment');
+    }
+    const res = await ordersRepository.assignOrder(String(params.orderrId), params.driverId, params.vehicleId);
     return (res as unknown) as OrderListItem;
 };
 
@@ -57,6 +72,12 @@ export function useOrderQueryStore(options?: UseOrderQueryStoreOptions) {
         staleTime: 0,
     });
 
+    const ordersUnassignedQuery = useQuery({
+        queryKey: [...UNASSIGNED_ORDERS_QUERY_KEY, listParams],
+        queryFn: () => fetchOrdersUnassigned(listParams),
+        staleTime: 0,
+    });
+
 
     // Mutation for creating order
     const createOrderMutation = useMutation({
@@ -76,6 +97,23 @@ export function useOrderQueryStore(options?: UseOrderQueryStoreOptions) {
         },
     });
 
+    const assignOrderMutation = useMutation({
+        mutationFn: assignOrderAPI,
+        onSuccess: (_, variables) => {
+            // Invalidate and refetch orders to get updated data
+            queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY, refetchType: "active" });
+
+            queryClient.invalidateQueries({ queryKey: UNASSIGNED_ORDERS_QUERY_KEY, refetchType: "active" });
+            if (variables?.orderrId) {
+                queryClient.invalidateQueries({ queryKey: ORDER_DETAIL_QUERY_KEY(variables.orderrId), refetchType: "active" });
+            }
+
+        },
+        onError: (error) => {
+            console.error("Error assigning order:", error);
+        },
+    });
+
     return {
         // Query data
         orders: ordersQuery.data?.items || [],
@@ -90,12 +128,25 @@ export function useOrderQueryStore(options?: UseOrderQueryStoreOptions) {
         isLoadingOrderDetail: orderDetailQuery.isLoading,
         isErrorOrderDetail: orderDetailQuery.isError,
 
+        // Orders unassigned data
+        ordersUnassigned: ordersUnassignedQuery.data?.items || [],
+        totalItemsUnassigned: ordersUnassignedQuery.data?.total_items || 0,
+        totalPagesUnassigned: ordersUnassignedQuery.data?.total_pages || 1,
+        currentPageUnassigned: ordersUnassignedQuery.data?.page || 1,
+        isLoadingOrdersUnassigned: ordersUnassignedQuery.isLoading,
+        isErrorOrdersUnassigned: ordersUnassignedQuery.isError,
+
         // Order creation mutations
         createOrder: createOrderMutation.mutate,
         createOrderAsync: createOrderMutation.mutateAsync,
         isCreating: createOrderMutation.isPending,
         createError: createOrderMutation.error,
 
+        // Order assignment mutations
+        assignOrder: assignOrderMutation.mutate,
+        assignOrderAsync: assignOrderMutation.mutateAsync,
+        isAssigning: assignOrderMutation.isPending,
+        assignError: assignOrderMutation.error,
 
         // Utility functions
         refetchOrders: ordersQuery.refetch,
