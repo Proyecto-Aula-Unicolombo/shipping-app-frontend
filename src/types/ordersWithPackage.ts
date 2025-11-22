@@ -86,8 +86,17 @@ export interface PackageItem {
     Receiver: Receiver;
 }
 
+export interface PackageResponse {
+    ID: number;
+    NumPackage: string;
+    Status: string;
+    TypePackage: string;
+    AddressPackage: AddressPackage;
+    Receiver: Receiver;
+}
+
 export interface PackagesListAPIResponse {
-    items: PackageItem[];
+    items: PackageResponse[];
     total_pages: number;
     total_items: number;
     page: number;

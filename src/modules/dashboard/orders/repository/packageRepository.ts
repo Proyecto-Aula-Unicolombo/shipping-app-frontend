@@ -10,8 +10,8 @@ export const packagesRepository = {
             limit: limit.toString() || "10",
             page: page.toString() || "1",
         });
-        
-        const res = await api.get(`/packages/?${queryParams.toString()}`);
+
+        const res = await api.get(`/packages/to-create-order?${queryParams.toString()}`);
         return res.data;
     },
 
