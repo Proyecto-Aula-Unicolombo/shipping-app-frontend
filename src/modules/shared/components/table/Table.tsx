@@ -21,7 +21,7 @@ export type TableProps<T> = {
     getRowKey?: (row: T, index: number) => string | number;
 };
 
-export function Table<T extends Record<string, unknown>>({
+export function Table<T extends object>({
     columns,
     data,
     emptyState = "No data available",

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { CreateOrderSchema } from "../types/orderTypes";
-import { OrdersListAPIResponse, OrderListItem } from "@/types/ordersWithPackage";
+import { OrdersListAPIResponse, OrderListItem, OrderDetailResponse } from "@/types/ordersWithPackage";
 import { OrderListParams, ordersRepository } from "../repository/orderRepository";
 
 
@@ -18,6 +18,11 @@ const fetchOrders = async (params?: OrderListParams): Promise<OrdersListAPIRespo
     const res = await ordersRepository.list(params);
     return res;
 };
+
+const fetchOrderById = async (id: number): Promise<OrderDetailResponse> => {
+    const res = await ordersRepository.get(String(id));
+    return (res as unknown) as OrderDetailResponse;
+}
 
 const createOrderAPI = async (data: CreateOrderSchema): Promise<OrderListItem> => {
     const payload: any = {
@@ -43,6 +48,13 @@ export function useOrderQueryStore(options?: UseOrderQueryStoreOptions) {
         queryFn: () => fetchOrders(listParams),
         staleTime: 5 * 60 * 1000, // 5 minutes
         placeholderData: (previousData) => previousData
+    });
+
+    const orderDetailQuery = useQuery({
+        queryKey: ORDER_DETAIL_QUERY_KEY(orderrId!),
+        queryFn: () => fetchOrderById(orderrId!),
+        enabled: orderrId !== null && orderrId !== undefined && orderrId > 0,
+        staleTime: 0,
     });
 
 
@@ -73,6 +85,10 @@ export function useOrderQueryStore(options?: UseOrderQueryStoreOptions) {
         isLoadingOrders: ordersQuery.isLoading,
         isErrorOrders: ordersQuery.isError,
 
+        // Order detail data
+        orderDetail: orderDetailQuery.data,
+        isLoadingOrderDetail: orderDetailQuery.isLoading,
+        isErrorOrderDetail: orderDetailQuery.isError,
 
         // Order creation mutations
         createOrder: createOrderMutation.mutate,
