@@ -7,6 +7,7 @@ export const ROUTES = {
         orders: "/ordenes",
         createOrder: "/ordenes/crear",
         orderDetail: (id: number) => `/ordenes/${id}`,
+        assignDriver: (id: number) => `/ordenes/asignar/${id}`,
         drivers: "/conductores",
         vehicles: "/vehiculos",
         createVehicle: "/vehiculos/crear",
