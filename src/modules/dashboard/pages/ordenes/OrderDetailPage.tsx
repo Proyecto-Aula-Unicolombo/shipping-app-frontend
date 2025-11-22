@@ -1,12 +1,14 @@
 "use client";
 
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { ROUTES } from "@/modules/shared/constants/routes";
 import { PageHeader } from "../../components/PageHeader";
 import { BackButton } from "../../components/BackButton";
 import { Table, type TableColumn } from "@/modules/shared/components/table/Table";
 import { useOrderQueryStore } from "../../orders/hooks/useOrderQueryStore";
 import { PackageItem } from "@/types/ordersWithPackage";
+import { Button } from "@/modules/shared/ui/Button";
 
 type PackageStatus = "entregado" | "en camino" | "pendiente" | "asignado";
 
@@ -15,6 +17,7 @@ const PACKAGE_STATUS_STYLES: Record<string, string> = {
     "en camino": "bg-blue-50 text-blue-700",
     "pendiente": "bg-amber-50 text-amber-600",
     "asignado": "bg-indigo-50 text-indigo-700",
+    "cancelado": "bg-red-50 text-red-700",
 };
 
 const packageColumns: TableColumn<PackageItem>[] = [
@@ -70,11 +73,16 @@ const packageColumns: TableColumn<PackageItem>[] = [
 
 export default function OrderDetailPage() {
     const params = useParams();
+    const router = useRouter();
     const orderId = parseInt(params.id as string);
 
     const { orderDetail: order, isLoadingOrderDetail } = useOrderQueryStore({
         orderrId: orderId
     });
+
+    const handleReassign = () => {
+        router.push(ROUTES.dashboard.assignDriver(orderId));
+    };
 
     if (isLoadingOrderDetail) {
         return (
@@ -100,21 +108,28 @@ export default function OrderDetailPage() {
 
     return (
         <div className="space-y-8 pb-10">
-            <div className="flex items-center gap-4">
-                <BackButton />
-                <div>
-                    <PageHeader eyebrow="Ordenes" title={`Orden #${order.ID}`} />
-                    <p className="text-sm text-slate-600 mt-1">
-                        Creada el {new Date(order.CreateAt).toLocaleDateString()} • {order.TypeService}
-                    </p>
+            <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                    <BackButton />
+                    <div>
+                        <PageHeader eyebrow="Ordenes" title={`Orden #${order.ID}`} />
+                        <p className="text-sm text-slate-600 mt-1">
+                            Creada el {new Date(order.CreateAt).toLocaleDateString()} • {order.TypeService}
+                        </p>
+                    </div>
                 </div>
-                <div className="ml-auto">
+                <div className="flex items-center gap-3 ">
                     <span className={`inline-flex rounded-full px-4 py-1.5 text-sm font-semibold ${order.Status === "en camino" ? "bg-blue-50 text-blue-700" :
                         order.Status === "entregado" ? "bg-emerald-50 text-emerald-700" :
-                            "bg-amber-50 text-amber-600"
+                            order.Status === "asignada" ? "bg-purple-50 text-purple-700" :
+                                order.Status === "incidente" ? "bg-red-50 text-red-700" :
+                                    "bg-amber-50 text-amber-600"
                         }`}>
                         {order.Status}
                     </span>
+                    <Button variant="primary" onClick={handleReassign}>
+                        Reasignar
+                    </Button>
                 </div>
             </div>
 
