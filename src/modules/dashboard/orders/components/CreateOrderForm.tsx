@@ -8,7 +8,7 @@ import { ROUTES } from "@/modules/shared/constants/routes";
 import { usePackageQueryStore } from "../hooks/usePakcageQueryStore";
 import { useDriverQueryStore } from "../../drivers/hooks/useDriverQueryStore";
 import { useVehicleQueryStore } from "../../vehicles/hooks/useVehicleQueryStore";
-import { PackageItem } from "@/types/ordersWithPackage";
+import { PackageResponse } from "@/types/ordersWithPackage";
 import { TablePagination } from "@/modules/shared/components/table/TablePagination";
 
 interface SelectedPackage {
@@ -59,7 +59,7 @@ export function CreateOrderForm() {
         isErrorUnassigned: isErrorVehicles,
     } = useVehicleQueryStore();
 
-    const handlePackageToggle = (pkg: PackageItem) => {
+    const handlePackageToggle = (pkg: PackageResponse) => {
         const isSelected = selectedPackages.some(sp => sp.packageId === pkg.ID);
 
         if (isSelected) {

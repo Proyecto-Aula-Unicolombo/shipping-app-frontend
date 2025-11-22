@@ -82,12 +82,21 @@ export interface PackageItem {
     IsFragile: boolean;
     AddressPackage: AddressPackage;
     ComercialInformation: CommercialInformation;
-    Sender: Sender;
+    Sender: Sender | null;
+    Receiver: Receiver;
+}
+
+export interface PackageResponse {
+    ID: number;
+    NumPackage: string;
+    Status: string;
+    TypePackage: string;
+    AddressPackage: AddressPackage;
     Receiver: Receiver;
 }
 
 export interface PackagesListAPIResponse {
-    items: PackageItem[];
+    items: PackageResponse[];
     total_pages: number;
     total_items: number;
     page: number;
@@ -95,3 +104,33 @@ export interface PackagesListAPIResponse {
 }
 
 export type PackageDetail = PackageItem;
+
+// New Interfaces for Order Detail Response
+
+export interface Driver {
+    ID: number;
+    Name: string;
+    LastName: string;
+    Email: string;
+}
+
+export interface Vehicle {
+    ID: number;
+    Plate: string;
+    Brand: string;
+    Model: string;
+    Color: string;
+    VehicleType: string;
+}
+
+export interface OrderDetailResponse {
+    ID: number;
+    Status: string;
+    Observation: string;
+    TypeService: string;
+    Driver?: Driver;
+    Vehicle?: Vehicle;
+    CreateAt: string;
+    AssignedAt: string;
+    Packages: PackageItem[];
+}
