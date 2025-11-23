@@ -16,6 +16,7 @@ const formatStatus = (status: string): string => {
         "en camino": "En Camino",
         "entregado": "Entregado",
         "cancelado": "Cancelado",
+        "incidente": "Incidente",
     };
     return statusMap[status.toLowerCase()] || status;
 };
@@ -26,7 +27,6 @@ const formatBase64Image = (base64String: string): string => {
         return base64String;
     }
     return `data:image/png;base64,${base64String}`;
-
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -35,6 +35,7 @@ const STATUS_STYLES: Record<string, string> = {
     "en camino": "bg-blue-50 text-blue-700",
     "entregado": "bg-emerald-50 text-emerald-700",
     "cancelado": "bg-red-50 text-red-700",
+    "incidente": "bg-orange-50 text-orange-700",
 };
 
 export default function PackageDetailPage() {
@@ -108,11 +109,9 @@ export default function PackageDetailPage() {
                                 {packageData.Receiver.email}
                             </p>
                             <p className="text-xs text-slate-500 mt-1">
-                                telefono: {packageData.Receiver.phone_number}
+                                Teléfono: {packageData.Receiver.phone_number}
                             </p>
                         </div>
-
-
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Dirección de Entrega</label>
@@ -173,17 +172,19 @@ export default function PackageDetailPage() {
                 </div>
             </div>
 
-            {/* Delivery Information - Only show if delivered or cancelled */}
-            {packageData.DeliveryInformation && (packageData.Status.toLowerCase() === "entregado" || packageData.Status.toLowerCase() === "cancelado") && (
+            {/* Delivery Information - Show based on status */}
+            {packageData.DeliveryInformation && (packageData.Status.toLowerCase() === "entregado" || packageData.Status.toLowerCase() === "cancelado" || packageData.Status.toLowerCase() === "incidente") && (
                 <div className="bg-white rounded-2xl border border-slate-200 p-6">
                     <h3 className="text-lg font-semibold text-slate-900 mb-6">
-                        {packageData.Status.toLowerCase() === "entregado" ? "Prueba de Entrega (POD)" : "Información de Cancelación"}
+                        {packageData.Status.toLowerCase() === "entregado" && "Prueba de Entrega (POD)"}
+                        {packageData.Status.toLowerCase() === "incidente" && "Información del Incidente"}
+                        {packageData.Status.toLowerCase() === "cancelado" && "Información de Cancelación"}
                     </h3>
 
                     <div className="space-y-6">
-                        {packageData.Status.toLowerCase() === "entregado" ? (
+
+                        {packageData.Status.toLowerCase() === "entregado" && (
                             <>
-                                {/* Foto de Entrega - REQUERIDA */}
                                 <div>
                                     <label className="block text-sm font-medium text-slate-700 mb-3">
                                         📸 Foto de Entrega
@@ -243,7 +244,6 @@ export default function PackageDetailPage() {
                                     </div>
                                 )}
 
-                                {/* Información adicional */}
                                 <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                                     <div className="flex items-start gap-3">
                                         <div className="flex-shrink-0">
@@ -260,17 +260,100 @@ export default function PackageDetailPage() {
                                     </div>
                                 </div>
                             </>
-                        ) : (
+                        )}
+
+                        {packageData.Status.toLowerCase() === "incidente" && (
                             <>
-                                {/* Razón de Cancelación */}
                                 {packageData.DeliveryInformation.ReasonCancellation && (
                                     <div>
                                         <label className="block text-sm font-medium text-slate-700 mb-2">
-                                            ⚠️ Razón de Cancelación
+                                            ⚠️ Descripción del Incidente
+                                        </label>
+                                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                            <p className="text-sm text-orange-900 font-medium">
+                                                {packageData.DeliveryInformation.ReasonCancellation}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {packageData.DeliveryInformation.PhotoDelivery && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-3">
+                                            📸 Foto del Incidente
+                                        </label>
+                                        <p className="text-xs text-slate-500 mb-2">
+                                            Foto tomada por el conductor del incidente
+                                        </p>
+                                        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 overflow-hidden">
+                                            <img
+                                                src={formatBase64Image(packageData.DeliveryInformation.PhotoDelivery)}
+                                                alt="Foto del incidente"
+                                                className="w-full max-w-2xl h-auto rounded-lg shadow-sm object-contain"
+                                                style={{ maxHeight: '500px' }}
+                                                onError={(e) => {
+                                                    const target = e.target as HTMLImageElement;
+                                                    target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect fill="%23f1f5f9"/><text x="50%" y="50%" text-anchor="middle" fill="%2364748b" font-family="sans-serif" font-size="14">Imagen no disponible</text></svg>';
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {packageData.DeliveryInformation.Observation && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                                            📝 Observaciones Adicionales
+                                        </label>
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <p className="text-sm text-slate-900">
+                                                {packageData.DeliveryInformation.Observation}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0">
+                                            <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                                                <span className="text-xl">⚠️</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-medium text-orange-900 mb-1">Incidente Reportado</h4>
+                                            <p className="text-sm text-orange-700">
+                                                Se ha reportado un incidente con este paquete
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+
+                        {packageData.Status.toLowerCase() === "cancelado" && (
+                            <>
+                                {packageData.DeliveryInformation.ReasonCancellation && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                                            ❌ Razón de Cancelación
                                         </label>
                                         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                                             <p className="text-sm text-red-900 font-medium">
                                                 {packageData.DeliveryInformation.ReasonCancellation}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {packageData.DeliveryInformation.Observation && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                                            📝 Observaciones
+                                        </label>
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <p className="text-sm text-slate-900">
+                                                {packageData.DeliveryInformation.Observation}
                                             </p>
                                         </div>
                                     </div>

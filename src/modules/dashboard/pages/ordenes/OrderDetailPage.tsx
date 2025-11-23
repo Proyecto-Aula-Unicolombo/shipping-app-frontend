@@ -18,6 +18,7 @@ const PACKAGE_STATUS_STYLES: Record<string, string> = {
     "pendiente": "bg-amber-50 text-amber-600",
     "asignado": "bg-indigo-50 text-indigo-700",
     "cancelado": "bg-red-50 text-red-700",
+    "incidente": "bg-red-50 text-red-700",
 };
 
 const packageColumns: TableColumn<PackageItem>[] = [
