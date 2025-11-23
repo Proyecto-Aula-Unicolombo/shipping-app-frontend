@@ -1,78 +1,62 @@
 "use client";
 
-import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { PageHeader } from "../../components/PageHeader";
 import { BackButton } from "../../components/BackButton";
-import { getPackageById, getOrderById } from "@/mocks/orders";
+import { usePackageQueryStore } from "../../orders/hooks/usePakcageQueryStore";
 
-type EventStatus = "Creado" | "En Tránsito" | "Entregado";
+// Status type from API (lowercase)
+type PackageStatus = "pendiente" | "asignado" | "en camino" | "entregado" | "cancelado";
 
-interface DeliveryEvent {
-    id: string;
-    status: EventStatus;
-    description: string;
-    timestamp: string;
-    icon: "📄" | "🚛" | "✅";
-}
+// Format status from API (lowercase) to display (capitalized)
+const formatStatus = (status: string): string => {
+    const statusMap: Record<string, string> = {
+        "pendiente": "Pendiente",
+        "asignado": "Asignado",
+        "en camino": "En Camino",
+        "entregado": "Entregado",
+        "cancelado": "Cancelado",
+    };
+    return statusMap[status.toLowerCase()] || status;
+};
+
+// Helper function to format Base64 images
+const formatBase64Image = (base64String: string): string => {
+    if (base64String.startsWith('data:image/')) {
+        return base64String;
+    }
+    return `data:image/png;base64,${base64String}`;
+
+};
 
 const STATUS_STYLES: Record<string, string> = {
-    "Entregado": "bg-emerald-50 text-emerald-700",
-    "En Tránsito": "bg-blue-50 text-blue-700",
-    "En camino": "bg-blue-50 text-blue-700",
-    "Pendiente": "bg-amber-50 text-amber-600",
+    "pendiente": "bg-amber-50 text-amber-600",
+    "asignado": "bg-indigo-50 text-indigo-700",
+    "en camino": "bg-blue-50 text-blue-700",
+    "entregado": "bg-emerald-50 text-emerald-700",
+    "cancelado": "bg-red-50 text-red-700",
 };
 
 export default function PackageDetailPage() {
     const params = useParams();
     const packageId = parseInt(params.packageId as string);
 
-    const packageData = useMemo(() => getPackageById(packageId), [packageId]);
-    const orderData = useMemo(() => {
-        if (packageData) {
-            return getOrderById(packageData.OrderID);
-        }
-        return null;
-    }, [packageData]);
+    const { packagaDetail: packageData, isloadingDetail, isErrorDetail } = usePackageQueryStore({
+        packageId
+    });
 
-    // Mock delivery events based on package status
-    const deliveryEvents: DeliveryEvent[] = useMemo(() => {
-        if (!packageData) return [];
+    if (isloadingDetail) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px]">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="mt-4 text-sm text-slate-600">Cargando detalles del paquete...</p>
+                </div>
+            </div>
+        );
+    }
 
-        const events: DeliveryEvent[] = [
-            {
-                id: "1",
-                status: "Creado",
-                description: "Paquete Creado",
-                timestamp: "15 de mayo de 2024, 10:00 AM",
-                icon: "📄"
-            }
-        ];
-
-        if (packageData.StartStatus === "En Tránsito" || packageData.StartStatus === "Entregado" || packageData.StartStatus === "En camino") {
-            events.push({
-                id: "2",
-                status: "En Tránsito",
-                description: "En Tránsito",
-                timestamp: "15 de mayo de 2024, 2:00 PM",
-                icon: "🚛"
-            });
-        }
-
-        if (packageData.StartStatus === "Entregado") {
-            events.push({
-                id: "3",
-                status: "Entregado",
-                description: "Entregado",
-                timestamp: "16 de mayo de 2024, 11:00 AM",
-                icon: "✅"
-            });
-        }
-
-        return events;
-    }, [packageData]);
-
-    if (!packageData) {
+    if (isErrorDetail || !packageData) {
         return (
             <div className="space-y-8">
                 <div className="flex items-center gap-4">
@@ -87,13 +71,17 @@ export default function PackageDetailPage() {
     }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 pb-10">
             <div className="flex items-center gap-4">
                 <BackButton />
                 <div>
-                    <PageHeader eyebrow="Paquetes" title={`Detalle de Paquete #${packageData.id}`} />
+                    <PageHeader eyebrow="Paquetes" title={`Paquete #${packageData.NumPackage}`} />
                     <p className="text-sm text-slate-600 mt-1">
-                        Orden asociada: #{packageData.OrderID} | Creado el 15 de mayo de 2024
+                        Creado el {new Date(packageData.CreatedAt).toLocaleDateString('es-CO', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        })}
                     </p>
                 </div>
             </div>
@@ -106,48 +94,69 @@ export default function PackageDetailPage() {
                     <div className="space-y-6">
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Estado</label>
-                            <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${STATUS_STYLES[packageData.StartStatus] || 'bg-gray-50 text-gray-700'}`}>
-                                {packageData.StartStatus}
+                            <span className={`inline-flex rounded-full px-3 py-1 text-sm font-semibold ${STATUS_STYLES[packageData.Status.toLowerCase()] || 'bg-gray-50 text-gray-700'}`}>
+                                {formatStatus(packageData.Status)}
                             </span>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Cliente</label>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Destinatario</label>
                             <p className="text-sm text-slate-900">
-                                {orderData?.ClientName || "Distribuciones S.A."}
+                                {packageData.Receiver.name} {packageData.Receiver.last_name}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                                {packageData.Receiver.email}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                                telefono: {packageData.Receiver.phone_number}
                             </p>
                         </div>
+
+
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Dirección de Entrega</label>
                             <p className="text-sm text-slate-900">
-                                {orderData?.DeliveryAddress || "Calle Principal #123, Ciudad"}
+                                {packageData.AddressPackage.destination}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                                Origen: {packageData.AddressPackage.origin}
                             </p>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Fecha de Entrega</label>
-                            <p className="text-sm text-slate-900">16 de mayo de 2024</p>
-                        </div>
+                        {packageData.Sender && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Remitente</label>
+                                <p className="text-sm text-slate-900">
+                                    {packageData.Sender.name}
+                                </p>
+                                <p className="text-xs text-slate-500 mt-1">
+                                    {packageData.Sender.email}
+                                </p>
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-6">
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">Tipo de Servicio</label>
-                            <p className="text-sm text-slate-900">
-                                {packageData.TypePackage === "Express" ? "Express" : "Standard"}
-                            </p>
-                        </div>
-
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Peso Total</label>
                             <p className="text-sm text-slate-900">{packageData.Weight} kg</p>
                         </div>
 
                         <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Dimensiones</label>
+                            <p className="text-sm text-slate-900">
+                                {packageData.Dimension} cm
+                            </p>
+                        </div>
+
+                        <div>
                             <label className="block text-sm font-medium text-slate-700 mb-2">Valor Declarado</label>
                             <p className="text-sm text-slate-900">
-                                ${packageData.DeclaredValue.toLocaleString('es-CO')}
+                                ${packageData.ComercialInformation.cost_sending.toLocaleString('es-CO')}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">
+                                Pago: {packageData.ComercialInformation.is_paid ? 'Pagado' : 'Por Cobrar'}
                             </p>
                         </div>
 
@@ -155,58 +164,135 @@ export default function PackageDetailPage() {
                             <label className="block text-sm font-medium text-slate-700 mb-2">Contenido</label>
                             <p className="text-sm text-slate-900">{packageData.DescriptionContent}</p>
                         </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Tipo de Paquete</label>
+                            <p className="text-sm text-slate-900">{packageData.TypePackage}</p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* Delivery History */}
-            <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 mb-6">Historial de Eventos</h3>
-
-                <div className="space-y-4">
-                    {deliveryEvents.map((event) => (
-                        <div key={event.id} className="flex items-start gap-4">
-                            <div className="flex-shrink-0">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg ${event.status === "Entregado" ? "bg-emerald-100" :
-                                        event.status === "En Tránsito" ? "bg-blue-100" :
-                                            "bg-slate-100"
-                                    }`}>
-                                    {event.icon}
-                                </div>
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                    {event.status === "Entregado" && (
-                                        <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
-                                    )}
-                                    {event.status === "En Tránsito" && (
-                                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                    )}
-                                    {event.status === "Creado" && (
-                                        <div className="w-3 h-3 bg-slate-400 rounded-full"></div>
-                                    )}
-                                    <p className="text-sm font-medium text-slate-900">{event.description}</p>
-                                </div>
-                                <p className="text-xs text-slate-500 mt-1">{event.timestamp}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            {/* Proof of Delivery */}
-            {packageData.StartStatus === "Entregado" && (
+            {/* Delivery Information - Only show if delivered or cancelled */}
+            {packageData.DeliveryInformation && (packageData.Status.toLowerCase() === "entregado" || packageData.Status.toLowerCase() === "cancelado") && (
                 <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-6">Prueba de Entrega (POD)</h3>
+                    <h3 className="text-lg font-semibold text-slate-900 mb-6">
+                        {packageData.Status.toLowerCase() === "entregado" ? "Prueba de Entrega (POD)" : "Información de Cancelación"}
+                    </h3>
 
-                    <div className="bg-slate-50 rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h4 className="font-medium text-slate-900 mb-2">Firma del Receptor</h4>
-                                <p className="text-sm text-slate-600 mb-1">Recibido por: Carlos Pérez</p>
-                                <p className="text-sm text-slate-500">Entregado el 16 de mayo de 2024 a las 11:00 AM</p>
-                            </div>
-                        </div>
+                    <div className="space-y-6">
+                        {packageData.Status.toLowerCase() === "entregado" ? (
+                            <>
+                                {/* Foto de Entrega - REQUERIDA */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-3">
+                                        📸 Foto de Entrega
+                                    </label>
+                                    <p className="text-xs text-slate-500 mb-2">
+                                        Foto tomada por el conductor al momento de la entrega
+                                    </p>
+                                    <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 overflow-hidden">
+                                        <img
+                                            src={formatBase64Image(packageData.DeliveryInformation.PhotoDelivery)}
+                                            alt="Foto de entrega del paquete"
+                                            className="w-full max-w-2xl h-auto rounded-lg shadow-sm object-contain"
+                                            style={{ maxHeight: '500px' }}
+                                            onError={(e) => {
+                                                const target = e.target as HTMLImageElement;
+                                                target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect fill="%23f1f5f9"/><text x="50%" y="50%" text-anchor="middle" fill="%2364748b" font-family="sans-serif" font-size="14">Imagen no disponible</text></svg>';
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+
+                                {packageData.DeliveryInformation.SignatureReceived && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-3">
+                                            ✍️ Firma del Receptor
+                                        </label>
+                                        <p className="text-xs text-slate-500 mb-2">
+                                            Firma del destinatario
+                                        </p>
+                                        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 overflow-hidden">
+                                            <div className="bg-white rounded border border-slate-300 p-2 inline-block max-w-full">
+                                                <img
+                                                    src={formatBase64Image(packageData.DeliveryInformation.SignatureReceived)}
+                                                    alt="Firma digital del receptor"
+                                                    className="w-full max-w-md h-auto object-contain"
+                                                    style={{ maxHeight: '200px' }}
+                                                    onError={(e) => {
+                                                        const target = e.target as HTMLImageElement;
+                                                        target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="150"><rect fill="%23ffffff" stroke="%23cbd5e1"/><text x="50%" y="50%" text-anchor="middle" fill="%2364748b" font-family="sans-serif" font-size="12">Firma no disponible</text></svg>';
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {packageData.DeliveryInformation.Observation && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                                            📝 Observaciones del Conductor
+                                        </label>
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <p className="text-sm text-slate-900">
+                                                {packageData.DeliveryInformation.Observation}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Información adicional */}
+                                <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0">
+                                            <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                                                <span className="text-xl">✅</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-medium text-emerald-900 mb-1">Paquete Entregado Exitosamente</h4>
+                                            <p className="text-sm text-emerald-700">
+                                                El paquete fue entregado al destinatario {packageData.Receiver.name} {packageData.Receiver.last_name}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Razón de Cancelación */}
+                                {packageData.DeliveryInformation.ReasonCancellation && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">
+                                            ⚠️ Razón de Cancelación
+                                        </label>
+                                        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                            <p className="text-sm text-red-900 font-medium">
+                                                {packageData.DeliveryInformation.ReasonCancellation}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="flex-shrink-0">
+                                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                                                <span className="text-xl">❌</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-medium text-red-900 mb-1">Entrega Cancelada</h4>
+                                            <p className="text-sm text-red-700">
+                                                Este paquete no pudo ser entregado y fue marcado como cancelado
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>
             )}

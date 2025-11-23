@@ -70,6 +70,14 @@ export interface Receiver {
     email: string;
 }
 
+export interface InformationDelivery {
+    ID: number;
+    Observation?: string;
+    SignatureReceived: string;
+    PhotoDelivery: string;
+    ReasonCancellation?: string;
+}
+
 export interface PackageItem {
     ID: number;
     NumPackage: string;
@@ -80,10 +88,13 @@ export interface PackageItem {
     DeclaredValue: number;
     TypePackage: string;
     IsFragile: boolean;
+    IdOrder: number;
+    CreatedAt: string;
     AddressPackage: AddressPackage;
     ComercialInformation: CommercialInformation;
     Sender: Sender | null;
     Receiver: Receiver;
+    DeliveryInformation: InformationDelivery | null;
 }
 
 export interface PackageResponse {
