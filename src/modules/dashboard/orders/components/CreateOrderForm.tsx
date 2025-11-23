@@ -116,76 +116,81 @@ export function CreateOrderForm() {
         <div className="space-y-8">
             {/* Available Packages Section */}
             <section className="space-y-4">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div>
                         <h2 className="text-lg font-semibold text-slate-900">Paquetes disponibles</h2>
                         <p className="text-sm text-slate-600">
                             Selecciona paquetes pendientes y agrégalos a la orden
                         </p>
                     </div>
-                    <div className="text-sm text-slate-600">
-                        {selectedPackages.length} paquete(s) seleccionado(s)
+                    <div className="text-sm font-medium text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+                        {selectedPackages.length} seleccionado(s)
                     </div>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 overflow-hidden">
-                    <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
-                        <div className="grid grid-cols-6 gap-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                            <div>Número</div>
-                            <div>Cliente</div>
-                            <div className="col-span-2">Dirección de entrega</div>
-                            <div>Estado</div>
-                            <div className="text-center">Seleccionar</div>
+                <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+                    {/* Wrapper con scroll horizontal */}
+                    <div className="overflow-x-auto">
+                        <div className="min-w-[800px]">
+                            <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
+                                <div className="grid grid-cols-6 gap-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                    <div>Número</div>
+                                    <div>Cliente</div>
+                                    <div className="col-span-2">Dirección de entrega</div>
+                                    <div>Estado</div>
+                                    <div className="text-center">Seleccionar</div>
+                                </div>
+                            </div>
+
+                            {isLoadingPackages ? (
+                                <div className="px-6 py-12 text-center">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                                    <p className="mt-2 text-sm text-slate-600">Cargando paquetes...</p>
+                                </div>
+                            ) : packages.length === 0 ? (
+                                <div className="px-6 py-12 text-center">
+                                    <p className="text-sm text-slate-600">No hay paquetes pendientes disponibles</p>
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-slate-200">
+                                    {packages.map((pkg) => {
+                                        const isSelected = selectedPackages.some(sp => sp.packageId === pkg.ID);
+                                        return (
+                                            <div
+                                                key={pkg.ID}
+                                                className={`px-6 py-4 hover:bg-slate-50 transition-colors ${isSelected ? 'bg-blue-50' : ''}`}
+                                            >
+                                                <div className="grid grid-cols-6 gap-4 items-center">
+                                                    <div className="text-sm font-medium text-slate-900">
+                                                        #{pkg.NumPackage}
+                                                    </div>
+                                                    <div className="text-sm text-blue-600">
+                                                        {pkg.Receiver.name} {pkg.Receiver.last_name}
+                                                    </div>
+                                                    <div className="col-span-2 text-sm text-slate-600 truncate" title={pkg.AddressPackage.destination}>
+                                                        {pkg.AddressPackage.destination}
+                                                    </div>
+                                                    <div>
+                                                        <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-amber-50 text-amber-600">
+                                                            {pkg.Status}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => handlePackageToggle(pkg)}
+                                                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     </div>
-
-                    {isLoadingPackages ? (
-                        <div className="px-6 py-12 text-center">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                            <p className="mt-2 text-sm text-slate-600">Cargando paquetes...</p>
-                        </div>
-                    ) : packages.length === 0 ? (
-                        <div className="px-6 py-12 text-center">
-                            <p className="text-sm text-slate-600">No hay paquetes pendientes disponibles</p>
-                        </div>
-                    ) : (
-                        <div className="divide-y divide-slate-200">
-                            {packages.map((pkg) => {
-                                const isSelected = selectedPackages.some(sp => sp.packageId === pkg.ID);
-                                return (
-                                    <div
-                                        key={pkg.ID}
-                                        className={`px-6 py-4 hover:bg-slate-50 transition-colors ${isSelected ? 'bg-blue-50' : ''}`}
-                                    >
-                                        <div className="grid grid-cols-6 gap-4 items-center">
-                                            <div className="text-sm font-medium text-slate-900">
-                                                #{pkg.NumPackage}
-                                            </div>
-                                            <div className="text-sm text-blue-600">
-                                                {pkg.Receiver.name} {pkg.Receiver.last_name}
-                                            </div>
-                                            <div className="col-span-2 text-sm text-slate-600 truncate">
-                                                {pkg.AddressPackage.destination}
-                                            </div>
-                                            <div>
-                                                <span className="inline-flex rounded-full px-2 py-1 text-xs font-semibold bg-amber-50 text-amber-600">
-                                                    {pkg.Status}
-                                                </span>
-                                            </div>
-                                            <div className="flex justify-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={isSelected}
-                                                    onChange={() => handlePackageToggle(pkg)}
-                                                    className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
 
                     {/* Paginación */}
                     <TablePagination
@@ -207,40 +212,45 @@ export function CreateOrderForm() {
                     <h2 className="text-lg font-semibold text-slate-900">
                         Paquetes seleccionados ({selectedPackages.length})
                     </h2>
-                    <div className="rounded-xl border border-slate-200 overflow-hidden bg-blue-50/30">
-                        <div className="bg-blue-50 px-6 py-3 border-b border-blue-200">
-                            <div className="grid grid-cols-5 gap-4 text-xs font-semibold uppercase tracking-wide text-blue-700">
-                                <div>Número</div>
-                                <div>Cliente</div>
-                                <div className="col-span-2">Dirección</div>
-                                <div>Acción</div>
-                            </div>
-                        </div>
-                        <div className="divide-y divide-blue-100 bg-white">
-                            {selectedPackages.map((pkg) => (
-                                <div key={pkg.packageId} className="px-6 py-4">
-                                    <div className="grid grid-cols-5 gap-4 items-center">
-                                        <div className="text-sm font-medium text-slate-900">
-                                            #{pkg.numPackage}
-                                        </div>
-                                        <div className="text-sm text-slate-600">
-                                            {pkg.clientName}
-                                        </div>
-                                        <div className="col-span-2 text-sm text-slate-600 truncate">
-                                            {pkg.deliveryAddress}
-                                        </div>
-                                        <div>
-                                            <Button
-                                                variant="ghost"
-                                                onClick={() => handleRemoveSelected(pkg.packageId)}
-                                                className="text-red-600 hover:text-red-700 hover:bg-red-50 text-sm"
-                                            >
-                                                Remover
-                                            </Button>
-                                        </div>
+                    <div className="rounded-xl border border-blue-200 overflow-hidden bg-white">
+                        {/* Wrapper con scroll horizontal */}
+                        <div className="overflow-x-auto">
+                            <div className="min-w-[700px]">
+                                <div className="bg-blue-50 px-6 py-3 border-b border-blue-200">
+                                    <div className="grid grid-cols-5 gap-4 text-xs font-semibold uppercase tracking-wide text-blue-700">
+                                        <div>Número</div>
+                                        <div>Cliente</div>
+                                        <div className="col-span-2">Dirección</div>
+                                        <div>Acción</div>
                                     </div>
                                 </div>
-                            ))}
+                                <div className="divide-y divide-blue-100 bg-white">
+                                    {selectedPackages.map((pkg) => (
+                                        <div key={pkg.packageId} className="px-6 py-4 hover:bg-blue-50/30 transition-colors">
+                                            <div className="grid grid-cols-5 gap-4 items-center">
+                                                <div className="text-sm font-medium text-slate-900">
+                                                    #{pkg.numPackage}
+                                                </div>
+                                                <div className="text-sm text-slate-600">
+                                                    {pkg.clientName}
+                                                </div>
+                                                <div className="col-span-2 text-sm text-slate-600 truncate" title={pkg.deliveryAddress}>
+                                                    {pkg.deliveryAddress}
+                                                </div>
+                                                <div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        onClick={() => handleRemoveSelected(pkg.packageId)}
+                                                        className="text-red-600 hover:text-red-700 hover:bg-red-50 text-sm"
+                                                    >
+                                                        Remover
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </section>

@@ -108,7 +108,8 @@ export default function OrderDetailPage() {
 
     return (
         <div className="space-y-8 pb-10">
-            <div className="flex items-center justify-between gap-4">
+            {/* Header - Responsive */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
                     <BackButton />
                     <div>
@@ -118,8 +119,8 @@ export default function OrderDetailPage() {
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-3 ">
-                    <span className={`inline-flex rounded-full px-4 py-1.5 text-sm font-semibold ${order.Status === "en camino" ? "bg-blue-50 text-blue-700" :
+                <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
+                    <span className={`inline-flex rounded-full px-4 py-1.5 text-sm font-semibold whitespace-nowrap ${order.Status === "en camino" ? "bg-blue-50 text-blue-700" :
                         order.Status === "entregado" ? "bg-emerald-50 text-emerald-700" :
                             order.Status === "asignada" ? "bg-purple-50 text-purple-700" :
                                 order.Status === "incidente" ? "bg-red-50 text-red-700" :
@@ -127,7 +128,7 @@ export default function OrderDetailPage() {
                         }`}>
                         {order.Status}
                     </span>
-                    <Button variant="primary" onClick={handleReassign}>
+                    <Button variant="primary" onClick={handleReassign} className="whitespace-nowrap">
                         Reasignar
                     </Button>
                 </div>
