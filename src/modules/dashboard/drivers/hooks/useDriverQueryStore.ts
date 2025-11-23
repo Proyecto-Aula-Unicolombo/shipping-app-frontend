@@ -61,15 +61,14 @@ export function useDriverQueryStore(options?: UseDriverQueryStoreOptions) {
     const driversQuery = useQuery({
         queryKey: [DRIVERS_QUERY_KEY, listParams],
         queryFn: () => fetchDrivers(listParams),
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes when inactive
         placeholderData: (previousData) => previousData
     });
 
     const fectchDriverUnassignedQuery = useQuery({
         queryKey: [...DRIVERS_QUERY_KEY, "unassigned"],
         queryFn: () => fectchDriversUnassigned(),
-        staleTime: 2 * 60 * 1000,
-        gcTime: 5 * 60 * 1000,
+        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes when inactive
         placeholderData: (previousData) => previousData
     });
 
@@ -77,7 +76,7 @@ export function useDriverQueryStore(options?: UseDriverQueryStoreOptions) {
         queryKey: DRIVERS_DETAIL_QUERY_KEY(driverId!),
         queryFn: () => fetchDriverById(driverId!),
         enabled: driverId !== null && driverId !== undefined && driverId > 0,
-        staleTime: 0,
+        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes when inactive
     });
 
     // Mutation for creating a new driver

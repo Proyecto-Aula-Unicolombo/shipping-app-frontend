@@ -63,7 +63,7 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
     const vehiclesQuery = useQuery({
         queryKey: [VEHICLES_QUERY_KEY, listParams],
         queryFn: () => fetchVehicles(listParams),
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes when inactive
         placeholderData: (previousData) => previousData
 
     });
@@ -71,8 +71,7 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
     const vehiclesUnassignedQuery = useQuery({
         queryKey: [...VEHICLES_QUERY_KEY, "unassigned"],
         queryFn: () => fetchVehiclesUnassigned(),
-        staleTime: 5 * 1000, // 5 seconds
-        gcTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes when inactive
         placeholderData: (previousData) => previousData
     });
 
@@ -80,7 +79,7 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         queryKey: VEHICLE_DETAIL_QUERY_KEY(vehicleId!),
         queryFn: () => fetchVehicleById(vehicleId!),
         enabled: vehicleId !== null && vehicleId !== undefined && vehicleId > 0,
-        staleTime: 5 * 60 * 1000,
+        staleTime: 2 * 60 * 1000,
     });
 
     // Mutation for creating a new vehicle
@@ -143,7 +142,7 @@ export function useVehicleQueryStore(options?: UseVehicleQueryStoreOptions) {
         isLoadingUnassigned: vehiclesUnassignedQuery.isLoading,
         isErrorUnassigned: vehiclesUnassignedQuery.isError,
         errorUnassigned: vehiclesUnassignedQuery.error,
-        
+
         // detail data
         vehicleDetail: vehicleDetailQuery.data,
         isDetailLoading: vehicleDetailQuery.isLoading,
