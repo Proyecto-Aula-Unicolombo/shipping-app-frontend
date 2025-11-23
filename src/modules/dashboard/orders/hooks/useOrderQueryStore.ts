@@ -108,6 +108,10 @@ export function useOrderQueryStore(options?: UseOrderQueryStoreOptions) {
                 queryClient.invalidateQueries({ queryKey: ORDER_DETAIL_QUERY_KEY(variables.orderrId), refetchType: "active" });
             }
 
+            queryClient.invalidateQueries({ queryKey: ["drivers"] });
+
+            queryClient.invalidateQueries({ queryKey: ["vehicles"] });
+
         },
         onError: (error) => {
             console.error("Error assigning order:", error);
