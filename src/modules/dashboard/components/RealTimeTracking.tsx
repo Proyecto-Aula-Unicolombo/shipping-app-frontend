@@ -8,12 +8,13 @@ import {
     FiMapPin,
     FiClock,
     FiActivity,
-    FiRefreshCw
+    FiRefreshCw,
+    FiAlertTriangle
 } from "react-icons/fi";
 
 export function RealTimeTracking() {
-    const { driversLocations, activeOrders, isConnected } = useAdminTracking();
     const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
+    const { driversLocations, activeOrders, isConnected, recentIncidents } = useAdminTracking(selectedOrder || undefined);
 
     // Calcular centro del mapa basado en todas las ubicaciones
     const getMapCenter = () => {
@@ -56,6 +57,19 @@ export function RealTimeTracking() {
                 return 'bg-yellow-100 text-yellow-700';
             case 'cancelado':
                 return 'bg-red-100 text-red-700';
+            default:
+                return 'bg-gray-100 text-gray-700';
+        }
+    };
+
+    const getIncidentStatusColor = (status: string) => {
+        switch (status) {
+            case 'Abierto':
+                return 'bg-red-100 text-red-700';
+            case 'En Progreso':
+                return 'bg-yellow-100 text-yellow-700';
+            case 'Cerrado':
+                return 'bg-green-100 text-green-700';
             default:
                 return 'bg-gray-100 text-gray-700';
         }
@@ -162,6 +176,60 @@ export function RealTimeTracking() {
                             )}
                         </div>
                     </div>
+
+                    {/* Últimos 3 incidentes */}
+                    {selectedOrder && recentIncidents.length > 0 && (
+                        <div className="bg-white rounded-xl border border-slate-200 p-4">
+                            <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                                <FiAlertTriangle className="text-orange-600" />
+                                Últimos Incidentes
+                            </h2>
+
+                            <div className="space-y-3">
+                                {recentIncidents.map((incident) => (
+                                    <div
+                                        key={incident.id}
+                                        className="p-3 rounded-lg border border-slate-200 hover:bg-slate-50 transition-colors"
+                                    >
+                                        <div className="flex items-start justify-between mb-2">
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-xs font-mono text-slate-500">
+                                                    INC-{incident.id.toString().padStart(3, '0')}
+                                                </span>
+                                            </div>
+                                            <span className={`text-xs font-medium px-2 py-1 rounded ${getIncidentStatusColor(incident.status)}`}>
+                                                {incident.status}
+                                            </span>
+                                        </div>
+
+                                        <p className="text-sm text-slate-700 mb-2 line-clamp-2">
+                                            {incident.description || 'Sin descripción'}
+                                        </p>
+
+                                        <div className="space-y-1 text-xs text-slate-600">
+                                            {incident.driver_name && (
+                                                <div className="flex items-center gap-2">
+                                                    <FiTruck size={10} className="text-slate-400" />
+                                                    <span>{incident.driver_name} {incident.driver_lastname}</span>
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-2">
+                                                <FiClock size={10} className="text-slate-400" />
+                                                <span>
+                                                    {new Date(incident.timestamp).toLocaleString('es-ES', {
+                                                        day: '2-digit',
+                                                        month: '2-digit',
+                                                        hour: '2-digit',
+                                                        minute: '2-digit'
+                                                    })}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Mapa */}

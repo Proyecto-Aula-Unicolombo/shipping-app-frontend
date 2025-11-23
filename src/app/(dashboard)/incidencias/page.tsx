@@ -1,26 +1,32 @@
 "use client";
 
-import { useState } from "react";
-import { incidentsMock } from "@/mocks/incidents";
+import { useState, useMemo } from "react";
+import { useIncidentsQuery } from "@/modules/dashboard/incidents/hooks/useIncidentsQuery";
 import { Button } from "@/modules/shared/ui/Button";
-import { FiPlus, FiSearch, FiMapPin, FiClock, FiUser } from "react-icons/fi";
+import { FiPlus, FiSearch, FiMapPin, FiClock, FiUser, FiRefreshCw } from "react-icons/fi";
 
 export default function IncidentsPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<"all" | "Abierto" | "En Progreso" | "Cerrado">("all");
-    
-    // Filter incidents based on search query and status
-    const filteredIncidents = incidentsMock.filter(incident => {
-        const matchesSearch = incident.id.toString().includes(searchQuery.toLowerCase()) ||
-            incident.Destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            incident.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            incident.Driver?.User.Name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            incident.Driver?.User.LastName.toLowerCase().includes(searchQuery.toLowerCase());
-        
-        const matchesStatus = statusFilter === "all" || incident.status === statusFilter;
-        
-        return matchesSearch && matchesStatus;
+
+    // Fetch incidents from API using React Query
+    const { incidents, isLoading, error, refetch } = useIncidentsQuery({
+        listParams: {
+            status: statusFilter === "all" ? undefined : statusFilter,
+        },
     });
+
+    // Filter incidents based on search query (client-side filtering)
+    const filteredIncidents = useMemo(() => {
+        return incidents.filter(incident => {
+            const matchesSearch = incident.id.toString().includes(searchQuery.toLowerCase()) ||
+                incident.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                incident.driver_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                incident.driver_lastname?.toLowerCase().includes(searchQuery.toLowerCase());
+
+            return matchesSearch;
+        });
+    }, [incidents, searchQuery]);
 
     const getStatusColor = (status: string) => {
         switch (status) {
@@ -36,7 +42,7 @@ export default function IncidentsPage() {
     };
 
     const getStatusCount = (status: "Abierto" | "En Progreso" | "Cerrado") => {
-        return incidentsMock.filter(incident => incident.status === status).length;
+        return incidents.filter(incident => incident.status === status).length;
     };
 
     return (
@@ -49,10 +55,21 @@ export default function IncidentsPage() {
                         Administra y monitorea incidentes de entrega en tiempo real
                     </p>
                 </div>
-                <Button className="flex items-center gap-2">
-                    <FiPlus size={16} />
-                    Reportar Incidente
-                </Button>
+                <div className="flex gap-2">
+                    <Button
+                        onClick={() => refetch()}
+                        variant="ghost"
+                        className="flex items-center gap-2"
+                        disabled={isLoading}
+                    >
+                        <FiRefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                        Actualizar
+                    </Button>
+                    <Button className="flex items-center gap-2">
+                        <FiPlus size={16} />
+                        Reportar Incidente
+                    </Button>
+                </div>
             </div>
 
             {/* Stats Cards */}
@@ -129,46 +146,64 @@ export default function IncidentsPage() {
                     </div>
                 </div>
                 <div className="divide-y divide-slate-200">
-                    {filteredIncidents.length === 0 ? (
+                    {isLoading ? (
+                        <div className="px-6 py-12 text-center">
+                            <FiRefreshCw className="animate-spin h-8 w-8 mx-auto text-slate-400 mb-3" />
+                            <p className="text-slate-500">Cargando incidentes...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="px-6 py-12 text-center">
+                            <p className="text-red-500 mb-2">Error: {error?.message || 'Error al cargar incidentes'}</p>
+                            <Button onClick={() => refetch()} variant="secondary">
+                                Reintentar
+                            </Button>
+                        </div>
+                    ) : filteredIncidents.length === 0 ? (
                         <div className="px-6 py-12 text-center">
                             <p className="text-slate-500">No se encontraron incidentes</p>
                         </div>
                     ) : (
-                        filteredIncidents.map((incident) => (
-                            <div key={incident.id} className="px-6 py-4 hover:bg-slate-50 cursor-pointer">
-                                <div className="grid grid-cols-6 gap-4 items-center">
-                                    <div className="text-sm font-medium text-slate-900">
-                                        INC-{incident.id.toString().padStart(3, '0')}
-                                    </div>
-                                    <div>
-                                        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(incident.status)}`}>
-                                            {incident.status}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <FiUser size={14} className="text-slate-400" />
-                                        <span className="text-sm text-slate-600">
-                                            {incident.Driver?.User.Name} {incident.Driver?.User.LastName}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <FiMapPin size={14} className="text-slate-400" />
-                                        <span className="text-sm text-slate-600 truncate">
-                                            {incident.Destination}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <FiClock size={14} className="text-slate-400" />
-                                        <span className="text-sm text-slate-600">
-                                            {new Date(incident.TimeStamp).toLocaleDateString('es-ES')}
-                                        </span>
-                                    </div>
-                                    <div className="text-sm text-slate-600 truncate">
-                                        {incident.description}
+                        filteredIncidents.map((incident) => {
+                            const driverFullName = incident.driver_name && incident.driver_lastname
+                                ? `${incident.driver_name} ${incident.driver_lastname}`
+                                : 'Sin asignar';
+
+                            return (
+                                <div key={incident.id} className="px-6 py-4 hover:bg-slate-50">
+                                    <div className="grid grid-cols-6 gap-4 items-center">
+                                        <div className="text-sm font-medium text-slate-900">
+                                            INC-{incident.id.toString().padStart(3, '0')}
+                                        </div>
+                                        <div>
+                                            <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${getStatusColor(incident.status)}`}>
+                                                {incident.status}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <FiUser size={14} className="text-slate-400" />
+                                            <span className="text-sm text-slate-600">
+                                                {driverFullName}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <FiMapPin size={14} className="text-slate-400" />
+                                            <span className="text-sm text-slate-600 truncate">
+                                                {incident.latitude.toFixed(4)}, {incident.longitude.toFixed(4)}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <FiClock size={14} className="text-slate-400" />
+                                            <span className="text-sm text-slate-600">
+                                                {new Date(incident.timestamp).toLocaleDateString('es-ES')}
+                                            </span>
+                                        </div>
+                                        <div className="text-sm text-slate-600 truncate">
+                                            {incident.description || 'Sin descripción'}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        ))
+                            );
+                        })
                     )}
                 </div>
             </div>

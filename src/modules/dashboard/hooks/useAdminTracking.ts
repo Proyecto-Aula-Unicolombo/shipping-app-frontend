@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { useWebSocket } from "@/modules/shared/hooks/useWebSocket";
+import { useIncidentsQuery } from "@/modules/dashboard/incidents/hooks/useIncidentsQuery";
+import { api } from "@/lib/apiClient";
 
 interface TrackUpdate {
     order_id: number;
@@ -21,9 +23,19 @@ interface DriverLocation {
     status?: string;
 }
 
-export function useAdminTracking() {
+export function useAdminTracking(selectedOrderId?: number) {
     const [driversLocations, setDriversLocations] = useState<Map<number, DriverLocation>>(new Map());
     const [activeOrders, setActiveOrders] = useState<number[]>([]);
+
+    // Fetch incidents for selected order
+    const { incidents } = useIncidentsQuery({
+        listParams: selectedOrderId ? { order_id: selectedOrderId } : undefined,
+    });
+
+    // Get last 3 incidents for selected order
+    const recentIncidents = selectedOrderId
+        ? incidents.slice(0, 3)
+        : [];
 
     // WebSocket callbacks
     const handleWebSocketOpen = useCallback((ws: WebSocket) => {
@@ -79,42 +91,38 @@ export function useAdminTracking() {
     useEffect(() => {
         const fetchActiveOrders = async () => {
             try {
-                // TODO: Llamar a la API para obtener todas las órdenes activas
-                // Por ahora usamos las que sabemos que existen
-                const orderIds = [1, 2, 4, 8]; // Órdenes activas del seed
+                // Llamar al endpoint de admin que devuelve todas las órdenes activas
+                const response = await api.get('/admin/tracking/active-orders');
 
-                // Fetch tracking data for each order
-                const locationsPromises = orderIds.map(async (orderId) => {
-                    try {
-                        const response = await fetch(`http://localhost:8000/api/v1/public/tracking/${orderId}`);
-                        if (response.ok) {
-                            const { data } = await response.json();
-                            if (data.tracks && data.tracks.length > 0) {
-                                const latestTrack = data.tracks[0]; // El más reciente
-                                return {
-                                    orderId: data.order_id,
-                                    location: {
-                                        lat: latestTrack.latitude,
-                                        lng: latestTrack.longitude
-                                    },
-                                    timestamp: latestTrack.timestamp,
-                                    status: data.status
-                                };
-                            }
-                        }
-                    } catch (err) {
-                        console.error(`Error fetching order ${orderId}:`, err);
-                    }
-                    return null;
-                });
-
-                const locations = await Promise.all(locationsPromises);
+                const { data } = response.data;
 
                 // Inicializar mapa de ubicaciones
                 const locationsMap = new Map<number, DriverLocation>();
-                locations.forEach(loc => {
-                    if (loc !== null) {
-                        locationsMap.set(loc.orderId, loc);
+                const orderIds: number[] = [];
+
+                data.forEach((order: {
+                    order_id: number;
+                    driver_id?: number;
+                    driver_name?: string;
+                    latitude?: number;
+                    longitude?: number;
+                    timestamp?: string;
+                    status: string;
+                }) => {
+                    // Solo agregar si tiene ubicación
+                    if (order.latitude && order.longitude) {
+                        locationsMap.set(order.order_id, {
+                            orderId: order.order_id,
+                            driverId: order.driver_id,
+                            driverName: order.driver_name,
+                            location: {
+                                lat: order.latitude,
+                                lng: order.longitude
+                            },
+                            timestamp: order.timestamp || new Date().toISOString(),
+                            status: order.status
+                        });
+                        orderIds.push(order.order_id);
                     }
                 });
 
@@ -131,6 +139,7 @@ export function useAdminTracking() {
     return {
         driversLocations: Array.from(driversLocations.values()),
         activeOrders,
-        isConnected
+        isConnected,
+        recentIncidents
     };
 }
