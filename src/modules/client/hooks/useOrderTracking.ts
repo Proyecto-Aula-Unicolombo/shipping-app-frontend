@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { ordersMock, type OrderListItem } from "@/mocks/orders";
-import { driversMock, type DriverListItem } from "@/mocks/drivers";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1';
 
 export interface OrderStatus {
     id: string;
@@ -25,8 +25,23 @@ export interface OrderStatus {
     }[];
 }
 
+interface TrackData {
+    track_id: number;
+    order_id: number;
+    latitude: number;
+    longitude: number;
+    timestamp: string;
+}
+
+interface APIResponse {
+    order_id: number;
+    status: string;
+    tracks: TrackData[];
+}
+
 export function useOrderTracking(orderNumber: string) {
     const [orderInfo, setOrderInfo] = useState<OrderStatus | null>(null);
+    const [trackHistory, setTrackHistory] = useState<Array<{ lat: number; lng: number }>>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -36,126 +51,127 @@ export function useOrderTracking(orderNumber: string) {
             setError(null);
 
             try {
-                // Simulate API call delay
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // Call public tracking API
+                const response = await fetch(`${API_URL}/public/tracking/${orderNumber}`);
 
-                // Find order in existing mock data
-                const foundOrder = ordersMock.find(order => order.id.toString() === orderNumber);
-                
-                if (!foundOrder) {
-                    setError("Pedido no encontrado");
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        setError("Pedido no encontrado");
+                    } else {
+                        setError("Error al cargar la información del pedido");
+                    }
                     setOrderInfo(null);
-                } else {
-                    // Find driver information if order has a driver assigned
-                    const driver = foundOrder.DriverID ? driversMock.find(d => d.id === foundOrder.DriverID) : null;
-                    
-                    // Map order status to client-friendly status
-                    const mapStatus = (status: string): "pending" | "in_transit" | "delivered" | "cancelled" => {
-                        switch (status.toLowerCase()) {
-                            case "pendiente":
-                                return "pending";
-                            case "en camino":
-                                return "in_transit";
-                            case "entregado":
-                                return "delivered";
-                            case "cancelado":
-                                return "cancelled";
-                            default:
-                                return "pending";
-                        }
-                    };
-
-                    // Generate timeline based on order status
-                    const generateTimeline = (order: OrderListItem, driver?: DriverListItem) => {
-                        const timeline = [
-                            {
-                                timestamp: new Date(order.Create_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-                                status: "Pedido confirmado",
-                                description: "Tu pedido ha sido confirmado y está siendo preparado",
-                                completed: true
-                            }
-                        ];
-
-                        if (order.Assing_at) {
-                            timeline.push({
-                                timestamp: new Date(order.Assing_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-                                status: "Asignado",
-                                description: driver ? `Asignado al conductor ${driver.User.Name} ${driver.User.LastName}` : "Asignado a conductor",
-                                completed: true
-                            });
-                        }
-
-                        if (order.Status === "En camino") {
-                            timeline.push({
-                                timestamp: new Date(order.Assing_at || order.Create_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-                                status: "En camino",
-                                description: driver ? `Tu pedido está en camino con ${driver.User.Name}` : "Tu pedido está en camino",
-                                completed: true
-                            });
-                        }
-
-                        if (order.Status === "Entregado") {
-                            timeline.push({
-                                timestamp: new Date(order.ETA).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-                                status: "Entregado",
-                                description: "Tu pedido ha sido entregado exitosamente",
-                                completed: true
-                            });
-                        } else {
-                            timeline.push({
-                                timestamp: new Date(order.ETA).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-                                status: "Entrega estimada",
-                                description: "Tu pedido será entregado aproximadamente a esta hora",
-                                completed: false
-                            });
-                        }
-
-                        return timeline;
-                    };
-
-                    // Generate mock coordinates based on delivery address
-                    const generateCoordinates = (address: string) => {
-                        // Simple hash function to generate consistent coordinates
-                        let hash = 0;
-                        for (let i = 0; i < address.length; i++) {
-                            const char = address.charCodeAt(i);
-                            hash = ((hash << 5) - hash) + char;
-                            hash = hash & hash; // Convert to 32bit integer
-                        }
-                        
-                        // Generate coordinates around Medellín, Colombia
-                        const baseLat = 6.2442;
-                        const baseLng = -75.5812;
-                        const latOffset = (hash % 1000) / 10000; // Small offset
-                        const lngOffset = ((hash >> 10) % 1000) / 10000;
-                        
-                        return {
-                            lat: baseLat + latOffset,
-                            lng: baseLng + lngOffset
-                        };
-                    };
-
-                    const destinationCoords = generateCoordinates(foundOrder.DeliveryAddress);
-                    const currentCoords = foundOrder.Status === "En camino" ? {
-                        lat: destinationCoords.lat - 0.01,
-                        lng: destinationCoords.lng - 0.01
-                    } : undefined;
-
-                    const orderStatus: OrderStatus = {
-                        id: foundOrder.id.toString(),
-                        status: mapStatus(foundOrder.Status),
-                        deliveryAddress: foundOrder.DeliveryAddress,
-                        estimatedTime: foundOrder.Status === "Entregado" ? "Entregado" : new Date(foundOrder.ETA).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-                        driverName: driver ? `${driver.User.Name} ${driver.User.LastName}` : undefined,
-                        driverPhone: driver?.PhoneNumber,
-                        currentLocation: currentCoords,
-                        destinationLocation: destinationCoords,
-                        timeline: generateTimeline(foundOrder, driver || undefined)
-                    };
-
-                    setOrderInfo(orderStatus);
+                    return;
                 }
-            } catch {
+
+                const { data } = await response.json() as { data: APIResponse };
+
+                // Map backend status to frontend status
+                const mapStatus = (status: string): "pending" | "in_transit" | "delivered" | "cancelled" => {
+                    switch (status.toLowerCase()) {
+                        case "pendiente":
+                            return "pending";
+                        case "en camino":
+                            return "in_transit";
+                        case "entregado":
+                            return "delivered";
+                        case "cancelado":
+                            return "cancelled";
+                        default:
+                            return "pending";
+                    }
+                };
+
+                // Get latest track (current location)
+                const latestTrack = data.tracks.length > 0 ? data.tracks[0] : null;
+
+                // Get destination (could be from order data or use last track)
+                // For now, use a fixed location or the latest track
+                const destinationCoords = latestTrack ? {
+                    lat: latestTrack.latitude,
+                    lng: latestTrack.longitude
+                } : {
+                    lat: 6.2442,
+                    lng: -75.5812
+                };
+
+                // Current location (slightly offset for in-transit orders)
+                const currentCoords = data.status.toLowerCase() === "en camino" && latestTrack ? {
+                    lat: latestTrack.latitude,
+                    lng: latestTrack.longitude
+                } : undefined;
+
+                // Generate timeline from tracks
+                const generateTimeline = (tracks: TrackData[], status: string) => {
+                    const timeline = [];
+
+                    // Add initial confirmation
+                    if (tracks.length > 0) {
+                        const firstTrack = tracks[tracks.length - 1];
+                        timeline.push({
+                            timestamp: new Date(firstTrack.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                            status: "Pedido confirmado",
+                            description: "Tu pedido ha sido confirmado y está siendo preparado",
+                            completed: true
+                        });
+                    }
+
+                    // Add in-transit status
+                    if (status.toLowerCase() === "en camino" && tracks.length > 0) {
+                        timeline.push({
+                            timestamp: new Date(tracks[0].timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                            status: "En camino",
+                            description: "Tu pedido está en camino",
+                            completed: true
+                        });
+                    }
+
+                    // Add delivery status
+                    if (status.toLowerCase() === "entregado") {
+                        timeline.push({
+                            timestamp: new Date(tracks[0].timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                            status: "Entregado",
+                            description: "Tu pedido ha sido entregado exitosamente",
+                            completed: true
+                        });
+                    } else {
+                        // Estimated delivery
+                        const estimatedTime = new Date();
+                        estimatedTime.setMinutes(estimatedTime.getMinutes() + 30); // 30 min estimate
+                        timeline.push({
+                            timestamp: estimatedTime.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+                            status: "Entrega estimada",
+                            description: "Tu pedido será entregado aproximadamente a esta hora",
+                            completed: false
+                        });
+                    }
+
+                    return timeline;
+                };
+
+                const orderStatus: OrderStatus = {
+                    id: data.order_id.toString(),
+                    status: mapStatus(data.status),
+                    deliveryAddress: "Dirección de entrega", // TODO: Get from order data
+                    estimatedTime: data.status.toLowerCase() === "entregado" ? "Entregado" : "30 min",
+                    currentLocation: currentCoords,
+                    destinationLocation: destinationCoords,
+                    timeline: generateTimeline(data.tracks, data.status)
+                };
+
+                // Map tracks to route path (ordenados del más antiguo al más reciente)
+                const routeHistory = data.tracks
+                    .slice()
+                    .reverse() // Invertir para tener del más antiguo al más reciente
+                    .map(track => ({
+                        lat: track.latitude,
+                        lng: track.longitude
+                    }));
+
+                setOrderInfo(orderStatus);
+                setTrackHistory(routeHistory);
+            } catch (err) {
+                console.error("Error fetching tracking:", err);
                 setError("Error al cargar la información del pedido");
                 setOrderInfo(null);
             } finally {
@@ -168,40 +184,16 @@ export function useOrderTracking(orderNumber: string) {
         }
     }, [orderNumber]);
 
-    // Simulate real-time location updates for in-transit orders
-    useEffect(() => {
-        if (!orderInfo || orderInfo.status !== "in_transit") return;
-
-        const interval = setInterval(() => {
-            setOrderInfo(prev => {
-                if (!prev || !prev.currentLocation) return prev;
-
-                // Simulate small movement towards destination
-                const deltaLat = (prev.destinationLocation.lat - prev.currentLocation.lat) * 0.01;
-                const deltaLng = (prev.destinationLocation.lng - prev.currentLocation.lng) * 0.01;
-
-                return {
-                    ...prev,
-                    currentLocation: {
-                        lat: prev.currentLocation.lat + deltaLat,
-                        lng: prev.currentLocation.lng + deltaLng
-                    }
-                };
-            });
-        }, 5000); // Update every 5 seconds
-
-        return () => clearInterval(interval);
-    }, [orderInfo?.status]);
-
     return {
         orderInfo,
+        trackHistory,
         isLoading,
         error,
         refetch: () => {
             if (orderNumber) {
                 setIsLoading(true);
-                // Re-trigger the effect
                 setOrderInfo(null);
+                setTrackHistory([]);
             }
         }
     };

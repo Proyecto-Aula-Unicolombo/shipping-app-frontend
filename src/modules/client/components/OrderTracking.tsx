@@ -1,10 +1,12 @@
 "use client";
 
+import { useState, useCallback, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { GoogleMap } from "@/modules/shared/components/GoogleMap";
 import { Button } from "@/modules/shared/ui/Button";
 import { ROUTES } from "@/modules/shared/constants/routes";
 import { useOrderTracking } from "../hooks/useOrderTracking";
+import { useWebSocket } from "@/modules/shared/hooks/useWebSocket";
 import {
     FiTruck,
     FiMapPin,
@@ -14,11 +16,89 @@ import {
     FiNavigation
 } from "react-icons/fi";
 
+interface TrackUpdate {
+    order_id: number;
+    track_id: number;
+    latitude: number;
+    longitude: number;
+    timestamp: string;
+}
+
 export function OrderTracking() {
     const router = useRouter();
     const params = useParams();
     const orderNumber = params.orderNumber as string;
-    const { orderInfo, isLoading, error } = useOrderTracking(orderNumber);
+    const { orderInfo, trackHistory, isLoading, error } = useOrderTracking(orderNumber);
+
+    // Real-time location state
+    const [realtimeLocation, setRealtimeLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+    // Route path history (todas las ubicaciones del recorrido)
+    // Inicializar con el historial de la API y agregar nuevas ubicaciones en tiempo real
+    const [routePath, setRoutePath] = useState<Array<{ lat: number; lng: number }>>([]);
+
+    // Sincronizar routePath con trackHistory cuando cambie
+    useEffect(() => {
+        if (trackHistory.length > 0) {
+            setRoutePath(trackHistory);
+        }
+    }, [trackHistory]);
+
+    // Memoize WebSocket callbacks to prevent reconnection loops
+    const handleWebSocketOpen = useCallback((ws: WebSocket) => {
+        console.log('🔌 WebSocket connected for tracking');
+        // Subscribe to this order's updates
+        ws.send(JSON.stringify({
+            type: 'subscribe',
+            role: 'client',
+            order_ids: [parseInt(orderNumber, 10)]
+        }));
+    }, [orderNumber]);
+
+    const handleWebSocketMessage = useCallback((message: { type: string; payload: unknown }) => {
+        console.log('📨 WebSocket message recibido:', message);
+        // Handle track updates
+        if (message.type === 'track_update') {
+            const payload = message.payload as TrackUpdate;
+            console.log('🔍 Track update para order:', payload.order_id, 'esperando:', parseInt(orderNumber, 10));
+
+            if (payload.order_id === parseInt(orderNumber, 10)) {
+                console.log('✅ Es nuestra orden! Actualizando ubicación...');
+                console.log('📍 Nueva ubicación:', { lat: payload.latitude, lng: payload.longitude });
+
+                const newLocation = {
+                    lat: payload.latitude,
+                    lng: payload.longitude
+                };
+                setRealtimeLocation(newLocation);
+                console.log('🗺️  Ubicación en tiempo real actualizada');
+
+                // Agregar nueva ubicación al recorrido
+                setRoutePath(prev => {
+                    const newPath = [...prev, newLocation];
+                    console.log('🛣️  Ruta actualizada. Total puntos:', newPath.length);
+                    return newPath;
+                });
+            } else {
+                console.log('⏭️  No es nuestra orden, ignorando');
+            }
+        } else if (message.type === 'connected') {
+            console.log('✅ Mensaje de bienvenida del servidor');
+        } else {
+            console.log('❓ Tipo de mensaje desconocido:', message.type);
+        }
+    }, [orderNumber]);
+
+    // WebSocket connection for real-time updates
+    const { isConnected, lastMessage } = useWebSocket({
+        onOpen: handleWebSocketOpen,
+        onMessage: handleWebSocketMessage,
+        reconnect: true,
+        maxReconnectAttempts: 3
+    });
+
+    // Use realtime location if available, otherwise use orderInfo location
+    const currentDriverLocation = realtimeLocation || orderInfo?.currentLocation;
 
     const getStatusInfo = (status: "pending" | "in_transit" | "delivered" | "cancelled") => {
         switch (status) {
@@ -76,13 +156,13 @@ export function OrderTracking() {
             icon: "🏠"
         });
 
-        // Driver location marker (if in transit)
-        if (orderInfo.status === "in_transit" && orderInfo.currentLocation) {
+        // Driver location marker (if in transit) - Use realtime location if available
+        if (orderInfo.status === "in_transit" && currentDriverLocation) {
             markers.push({
                 id: "driver",
                 position: {
-                    lat: orderInfo.currentLocation.lat,
-                    lng: orderInfo.currentLocation.lng
+                    lat: currentDriverLocation.lat,
+                    lng: currentDriverLocation.lng
                 },
                 title: "Conductor",
                 icon: "🚚"
@@ -137,9 +217,10 @@ export function OrderTracking() {
                 {/* Map */}
                 <div className="h-[30rem] relative">
                     <GoogleMap
-                        center={orderInfo.currentLocation || orderInfo.destinationLocation}
-                        zoom={13}
+                        center={currentDriverLocation || orderInfo.destinationLocation}
+                        zoom={14}
                         markers={getMapMarkers()}
+                        routePath={routePath}
                         className="w-full h-full"
                     />
 
@@ -360,9 +441,10 @@ export function OrderTracking() {
                 {/* Right Panel - Map */}
                 <div className="flex-1 relative">
                     <GoogleMap
-                        center={orderInfo.currentLocation || orderInfo.destinationLocation}
-                        zoom={13}
+                        center={currentDriverLocation || orderInfo.destinationLocation}
+                        zoom={14}
                         markers={getMapMarkers()}
+                        routePath={routePath}
                         className="w-full h-full"
                     />
 

@@ -6,6 +6,7 @@ import { PiUsers } from 'react-icons/pi';
 import { PiTruck } from 'react-icons/pi';
 import { RiErrorWarningLine } from 'react-icons/ri';
 import { RiSettings4Line } from 'react-icons/ri';
+import { FiMapPin } from 'react-icons/fi';
 
 export type NavigationItem = {
     label: string;
@@ -21,6 +22,7 @@ type NavigationGroups = {
 export const dashboardNavigation: NavigationGroups = {
     primary: [
         { label: "Panel", href: ROUTES.dashboard.panel, icon: <GoHome size={24} /> },
+        { label: "Rastreo", href: ROUTES.dashboard.tracking, icon: <FiMapPin size={24} /> },
         { label: "Órdenes", href: ROUTES.dashboard.orders, icon: <BsBoxSeam size={24} /> },
         { label: "Conductores", href: ROUTES.dashboard.drivers, icon: <PiUsers size={24} /> },
         { label: "Vehículos", href: ROUTES.dashboard.vehicles, icon: <PiTruck size={24} /> },

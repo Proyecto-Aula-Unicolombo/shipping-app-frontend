@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { GoogleMap as ReactGoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api";
+import { useCallback, useState, useEffect } from "react";
+import { GoogleMap as ReactGoogleMap, useJsApiLoader, Marker, Polyline } from "@react-google-maps/api";
 
 interface GoogleMapProps {
     center?: { lat: number; lng: number };
@@ -15,6 +15,7 @@ interface GoogleMapProps {
         icon?: string;
         onClick?: () => void;
     }>;
+    routePath?: Array<{ lat: number; lng: number }>;
 }
 
 const mapContainerStyle = {
@@ -40,7 +41,8 @@ export function GoogleMap({
     zoom = 13,
     className = "w-full h-96",
     onMapLoad,
-    markers = []
+    markers = [],
+    routePath = []
 }: GoogleMapProps) {
     const { isLoaded, loadError } = useJsApiLoader({
         id: 'google-map-script',
@@ -54,6 +56,13 @@ export function GoogleMap({
         setMap(map);
         onMapLoad?.(map);
     }, [onMapLoad]);
+
+    // Update map center when center prop changes
+    useEffect(() => {
+        if (map && center) {
+            map.panTo(center);
+        }
+    }, [map, center]);
 
     const onUnmount = useCallback(() => {
         setMap(null);
@@ -89,6 +98,20 @@ export function GoogleMap({
                 onUnmount={onUnmount}
                 options={mapOptions}
             >
+                {/* Polyline para mostrar el recorrido */}
+                {routePath.length > 1 && (
+                    <Polyline
+                        path={routePath}
+                        options={{
+                            strokeColor: "#2563EB",
+                            strokeOpacity: 0.8,
+                            strokeWeight: 4,
+                            geodesic: true,
+                        }}
+                    />
+                )}
+
+                {/* Marcadores en el mapa */}
                 {markers.map((marker) => (
                     <Marker
                         key={marker.id}

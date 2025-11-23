@@ -4,6 +4,7 @@ export const ROUTES = {
     },
     dashboard: {
         panel: "/panel",
+        tracking: "/rastreo",
         orders: "/ordenes",
         createOrder: "/ordenes/crear",
         orderDetail: (id: number) => `/ordenes/${id}`,
