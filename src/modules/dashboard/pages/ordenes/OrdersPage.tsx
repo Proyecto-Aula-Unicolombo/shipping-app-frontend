@@ -30,6 +30,10 @@ const formatStatus = (status: Status): string => {
         "entregado": "Entregado",
         "asignada": "Asignada",
         "incidente": "Incidente",
+        "cancelada": "Cancelada",
+        "parcialmente_completada": "Parcialmente Completada",
+        "finalizada": "Finalizada",
+        "completada": "Completada"
     };
     return statusMap[status] || status;
 };
@@ -49,6 +53,10 @@ const STATUS_STYLES: Record<Status, string> = {
     "pendiente": "bg-amber-50 text-amber-600",
     "asignada": "bg-purple-50 text-purple-700",
     "incidente": "bg-red-50 text-red-700",
+    "cancelada": "bg-red-50 text-red-700",
+    "parcialmente_completada": "bg-purple-50 text-purple-700",
+    "finalizada": "bg-emerald-50 text-emerald-700",
+    "completada": "bg-emerald-50 text-emerald-700"
 };
 
 export const SERVICE_TYPE_STYLES: Record<ServiceType, string> = {

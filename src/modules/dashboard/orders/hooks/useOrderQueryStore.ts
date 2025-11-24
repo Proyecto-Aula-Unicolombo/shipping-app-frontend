@@ -61,7 +61,7 @@ export function useOrderQueryStore(options?: UseOrderQueryStoreOptions) {
     const ordersQuery = useQuery({
         queryKey: [...ORDERS_QUERY_KEY, listParams],
         queryFn: () => fetchOrders(listParams),
-        staleTime: 5 * 60 * 1000, // 5 minutes
+        gcTime: 5 * 60 * 100,
         placeholderData: (previousData) => previousData
     });
 
@@ -69,13 +69,11 @@ export function useOrderQueryStore(options?: UseOrderQueryStoreOptions) {
         queryKey: ORDER_DETAIL_QUERY_KEY(orderrId!),
         queryFn: () => fetchOrderById(orderrId!),
         enabled: orderrId !== null && orderrId !== undefined && orderrId > 0,
-        staleTime: 0,
     });
 
     const ordersUnassignedQuery = useQuery({
         queryKey: [...UNASSIGNED_ORDERS_QUERY_KEY, listParams],
         queryFn: () => fetchOrdersUnassigned(listParams),
-        staleTime: 0,
     });
 
 
