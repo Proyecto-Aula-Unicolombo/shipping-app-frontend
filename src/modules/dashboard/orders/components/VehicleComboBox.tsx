@@ -17,6 +17,7 @@ interface VehicleComboboxProps {
   value: number | undefined;
   onChange: (value: number | undefined) => void;
   isLoading?: boolean;
+  label?: string;
 }
 
 type VehicleOption = {
@@ -29,6 +30,7 @@ export const VehicleCombobox = memo(function VehicleCombobox({
   value,
   onChange,
   isLoading = false,
+  label = "Vehículo a asignar",
 }: VehicleComboboxProps) {
   const options = useMemo<VehicleOption[]>(
     () =>
@@ -49,7 +51,7 @@ export const VehicleCombobox = memo(function VehicleCombobox({
   };
 
   return (
-    <FormField label="Vehículo Asignado" htmlFor="vehicleId">
+    <FormField label={label} htmlFor="vehicleId">
       <ReactSelect
         inputId="vehicleId"
         options={options}
@@ -74,8 +76,8 @@ export const VehicleCombobox = memo(function VehicleCombobox({
             backgroundColor: state.isSelected
               ? "#3b82f6"
               : state.isFocused
-              ? "#eff6ff"
-              : "white",
+                ? "#eff6ff"
+                : "white",
             color: state.isSelected ? "white" : "#334155",
             cursor: "pointer",
           }),
