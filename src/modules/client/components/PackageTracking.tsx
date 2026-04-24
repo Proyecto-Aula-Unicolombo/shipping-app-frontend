@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { GoogleMap } from "@/modules/shared/components/GoogleMap";
 import { Button } from "@/modules/shared/ui/Button";
 import { ROUTES } from "@/modules/shared/constants/routes";
-import { useOrderTracking } from "../hooks/useOrderTracking";
+import { usePackageTracking } from "../hooks/usePackageTracking";
 import { useWebSocket } from "@/modules/shared/hooks/useWebSocket";
 import {
     FiTruck,
@@ -13,7 +13,9 @@ import {
     FiClock,
     FiPhone,
     FiMessageCircle,
-    FiNavigation
+    FiNavigation,
+    FiPackage,
+    FiAlertTriangle
 } from "react-icons/fi";
 
 interface TrackUpdate {
@@ -24,11 +26,11 @@ interface TrackUpdate {
     timestamp: string;
 }
 
-export function OrderTracking() {
+export function PackageTracking() {
     const router = useRouter();
     const params = useParams();
-    const orderNumber = params.orderNumber as string;
-    const { orderInfo, trackHistory, isLoading, error } = useOrderTracking(orderNumber);
+    const numPackage = params.orderNumber as string;
+    const { packageInfo, trackHistory, isLoading, error } = usePackageTracking(numPackage);
 
     // Real-time location state
     const [realtimeLocation, setRealtimeLocation] = useState<{ lat: number; lng: number } | null>(null);
@@ -46,48 +48,37 @@ export function OrderTracking() {
 
     // Memoize WebSocket callbacks to prevent reconnection loops
     const handleWebSocketOpen = useCallback((ws: WebSocket) => {
-        console.log('🔌 WebSocket connected for tracking');
-        // Subscribe to this order's updates
+        console.log('🔌 WebSocket connected for package tracking');
+        // Subscribe to updates - the backend still uses order_ids for the WS subscription
         ws.send(JSON.stringify({
             type: 'subscribe',
             role: 'client',
-            order_ids: [parseInt(orderNumber, 10)]
+            order_ids: [parseInt(numPackage, 10)]
         }));
-    }, [orderNumber]);
+    }, [numPackage]);
 
     const handleWebSocketMessage = useCallback((message: { type: string; payload: unknown }) => {
         console.log('📨 WebSocket message recibido:', message);
-        // Handle track updates
         if (message.type === 'track_update') {
             const payload = message.payload as TrackUpdate;
-            console.log('🔍 Track update para order:', payload.order_id, 'esperando:', parseInt(orderNumber, 10));
+            console.log('🔍 Track update recibido:', payload);
 
-            if (payload.order_id === parseInt(orderNumber, 10)) {
-                console.log('✅ Es nuestra orden! Actualizando ubicación...');
-                console.log('📍 Nueva ubicación:', { lat: payload.latitude, lng: payload.longitude });
+            const newLocation = {
+                lat: payload.latitude,
+                lng: payload.longitude
+            };
+            setRealtimeLocation(newLocation);
 
-                const newLocation = {
-                    lat: payload.latitude,
-                    lng: payload.longitude
-                };
-                setRealtimeLocation(newLocation);
-                console.log('🗺️  Ubicación en tiempo real actualizada');
-
-                // Agregar nueva ubicación al recorrido
-                setRoutePath(prev => {
-                    const newPath = [...prev, newLocation];
-                    console.log('🛣️  Ruta actualizada. Total puntos:', newPath.length);
-                    return newPath;
-                });
-            } else {
-                console.log('⏭️  No es nuestra orden, ignorando');
-            }
+            // Agregar nueva ubicación al recorrido
+            setRoutePath(prev => {
+                const newPath = [...prev, newLocation];
+                console.log('🛣️  Ruta actualizada. Total puntos:', newPath.length);
+                return newPath;
+            });
         } else if (message.type === 'connected') {
             console.log('✅ Mensaje de bienvenida del servidor');
-        } else {
-            console.log('❓ Tipo de mensaje desconocido:', message.type);
         }
-    }, [orderNumber]);
+    }, []);
 
     // WebSocket connection for real-time updates
     const { isConnected, lastMessage } = useWebSocket({
@@ -97,14 +88,14 @@ export function OrderTracking() {
         maxReconnectAttempts: 3
     });
 
-    // Use realtime location if available, otherwise use orderInfo location
-    const currentDriverLocation = realtimeLocation || orderInfo?.currentLocation;
+    // Use realtime location if available, otherwise use packageInfo location
+    const currentDriverLocation = realtimeLocation || packageInfo?.currentLocation;
 
     const getStatusInfo = (status: "pending" | "in_transit" | "delivered" | "cancelled") => {
         switch (status) {
             case "pending":
                 return {
-                    text: "Preparando pedido",
+                    text: "Preparando paquete",
                     color: "text-yellow-600",
                     bgColor: "bg-yellow-50",
                     icon: FiClock
@@ -141,7 +132,7 @@ export function OrderTracking() {
     };
 
     const getMapMarkers = () => {
-        if (!orderInfo) return [];
+        if (!packageInfo) return [];
 
         const markers = [];
 
@@ -149,15 +140,15 @@ export function OrderTracking() {
         markers.push({
             id: "destination",
             position: {
-                lat: orderInfo.destinationLocation.lat,
-                lng: orderInfo.destinationLocation.lng
+                lat: packageInfo.destinationLocation.lat,
+                lng: packageInfo.destinationLocation.lng
             },
             title: "Destino",
             icon: "🏠"
         });
 
         // Driver location marker (if in transit) - Use realtime location if available
-        if (orderInfo.status === "in_transit" && currentDriverLocation) {
+        if (packageInfo.status === "in_transit" && currentDriverLocation) {
             markers.push({
                 id: "driver",
                 position: {
@@ -177,37 +168,37 @@ export function OrderTracking() {
             <div className="min-h-screen bg-slate-50 flex items-center justify-center">
                 <div className="text-center">
                     <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                    <p className="text-slate-600">Cargando información del pedido...</p>
+                    <p className="text-slate-600">Cargando información del paquete...</p>
                 </div>
             </div>
         );
     }
 
-    if (error || !orderInfo) {
+    if (error || !packageInfo) {
         return (
             <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
                 <div className="text-center">
                     <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                        <FiTruck size={32} className="text-red-600" />
+                        <FiPackage size={32} className="text-red-600" />
                     </div>
                     <h2 className="text-xl font-semibold text-slate-900 mb-2">
-                        {error || "Pedido no encontrado"}
+                        {error || "Paquete no encontrado"}
                     </h2>
                     <p className="text-slate-600 mb-6">
-                        {error ? "Hubo un problema al cargar la información" : `No pudimos encontrar un pedido con el número ${orderNumber}`}
+                        {error ? "Hubo un problema al cargar la información" : `No pudimos encontrar un paquete con el número ${numPackage}`}
                     </p>
                     <Button
                         onClick={() => router.push(ROUTES.client.tracking)}
                         variant="secondary"
                     >
-                        Buscar otro pedido
+                        Buscar otro paquete
                     </Button>
                 </div>
             </div>
         );
     }
 
-    const statusInfo = getStatusInfo(orderInfo.status);
+    const statusInfo = getStatusInfo(packageInfo.status);
     const StatusIcon = statusInfo.icon;
 
     return (
@@ -217,7 +208,7 @@ export function OrderTracking() {
                 {/* Map */}
                 <div className="h-[30rem] relative">
                     <GoogleMap
-                        center={currentDriverLocation || orderInfo.destinationLocation}
+                        center={currentDriverLocation || packageInfo.destinationLocation}
                         zoom={14}
                         markers={getMapMarkers()}
                         routePath={routePath}
@@ -255,7 +246,7 @@ export function OrderTracking() {
                     </div>
                 </div>
 
-                {/* Order Info */}
+                {/* Package Info */}
                 <div className="flex-1 bg-white rounded-t-3xl -mt-6 relative z-10 p-6 space-y-6">
                     {/* Status */}
                     <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-full ${statusInfo.bgColor}`}>
@@ -265,90 +256,75 @@ export function OrderTracking() {
                         </span>
                     </div>
 
-                    {/* Order Details */}
+                    {/* Package Details */}
                     <div className="space-y-4">
                         <div className="flex items-start gap-3">
                             <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <FiTruck size={16} className="text-blue-600" />
+                                <FiPackage size={16} className="text-blue-600" />
                             </div>
                             <div className="flex-1">
                                 <p className="font-medium text-slate-900">
-                                    Pedido #{orderInfo.id}
+                                    Paquete #{packageInfo.numPackage}
                                 </p>
                                 <p className="text-sm text-slate-600">
                                     {statusInfo.text}
                                 </p>
+                                {packageInfo.isFragile && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                        <FiAlertTriangle size={12} className="text-orange-500" />
+                                        <span className="text-xs text-orange-600 font-medium">Frágil</span>
+                                    </div>
+                                )}
+                                {packageInfo.weight && (
+                                    <p className="text-xs text-slate-500 mt-1">
+                                        Peso: {packageInfo.weight} kg
+                                    </p>
+                                )}
                             </div>
                         </div>
 
                         <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <FiMapPin size={16} className="text-slate-600" />
+                            <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                <FiMapPin size={16} className="text-green-600" />
                             </div>
                             <div className="flex-1">
-                                <p className="font-medium text-slate-900">
-                                    Dirección de entrega
-                                </p>
-                                <p className="text-sm text-slate-600">
-                                    {orderInfo.deliveryAddress}
-                                </p>
+                                <p className="font-medium text-slate-900">Origen</p>
+                                <p className="text-sm text-slate-600">{packageInfo.origin}</p>
                             </div>
                         </div>
 
                         <div className="flex items-start gap-3">
-                            <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <FiClock size={16} className="text-slate-600" />
+                            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                <FiMapPin size={16} className="text-red-600" />
                             </div>
                             <div className="flex-1">
-                                <p className="font-medium text-slate-900">
-                                    Tiempo estimado
-                                </p>
-                                <p className="text-sm text-slate-600">
-                                    Entrega estimada: {orderInfo.estimatedTime}
-                                </p>
+                                <p className="font-medium text-slate-900">Destino</p>
+                                <p className="text-sm text-slate-600">{packageInfo.destination}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Driver Contact (only if in transit) */}
-                    {orderInfo.status === "in_transit" && orderInfo.driverName && (
+                    {/* Receiver Info */}
+                    {packageInfo.receiverName && (
                         <div className="bg-slate-50 rounded-xl p-4">
                             <h3 className="font-medium text-slate-900 mb-3">
-                                Información del conductor
+                                Destinatario
                             </h3>
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="font-medium text-slate-900">
-                                        {orderInfo.driverName}
+                                        {packageInfo.receiverName}
                                     </p>
-                                    <p className="text-sm text-slate-600">
-                                        Conductor asignado
-                                    </p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors">
-                                        <FiPhone size={16} className="text-green-600" />
-                                    </button>
-                                    <button className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors">
-                                        <FiMessageCircle size={16} className="text-blue-600" />
-                                    </button>
                                 </div>
                             </div>
                         </div>
-                    )}
-
-                    {/* Contact Driver Button */}
-                    {orderInfo.status === "in_transit" && (
-                        <Button className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl">
-                            Contactar al conductor
-                        </Button>
                     )}
                 </div>
             </div>
 
             {/* Desktop Layout */}
             <div className="hidden lg:flex min-h-screen max-w-7xl mx-auto">
-                {/* Left Panel - Order Info */}
+                {/* Left Panel - Package Info */}
                 <div className="w-96 bg-white shadow-lg p-8 space-y-6 overflow-y-auto">
                     {/* Status */}
                     <div className={`inline-flex items-center gap-2 px-4 py-3 rounded-full ${statusInfo.bgColor}`}>
@@ -358,90 +334,76 @@ export function OrderTracking() {
                         </span>
                     </div>
 
-                    {/* Order Details */}
+                    {/* Package Details */}
                     <div className="space-y-6">
                         <div className="flex items-start gap-4">
                             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <FiTruck size={18} className="text-blue-600" />
+                                <FiPackage size={18} className="text-blue-600" />
                             </div>
                             <div className="flex-1">
                                 <p className="font-semibold text-slate-900 text-lg">
-                                    Pedido #{orderInfo.id}
+                                    Paquete #{packageInfo.numPackage}
                                 </p>
                                 <p className="text-slate-600">
                                     {statusInfo.text}
                                 </p>
+                                {packageInfo.isFragile && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                        <FiAlertTriangle size={14} className="text-orange-500" />
+                                        <span className="text-sm text-orange-600 font-medium">Frágil</span>
+                                    </div>
+                                )}
+                                {packageInfo.weight && (
+                                    <p className="text-sm text-slate-500 mt-1">
+                                        Peso: {packageInfo.weight} kg
+                                    </p>
+                                )}
                             </div>
                         </div>
 
                         <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <FiMapPin size={18} className="text-slate-600" />
+                            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                <FiMapPin size={18} className="text-green-600" />
                             </div>
                             <div className="flex-1">
-                                <p className="font-semibold text-slate-900">
-                                    Dirección de entrega
-                                </p>
-                                <p className="text-slate-600">
-                                    {orderInfo.deliveryAddress}
-                                </p>
+                                <p className="font-semibold text-slate-900">Origen</p>
+                                <p className="text-slate-600">{packageInfo.origin}</p>
                             </div>
                         </div>
 
                         <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                                <FiClock size={18} className="text-slate-600" />
+                            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                                <FiMapPin size={18} className="text-red-600" />
                             </div>
                             <div className="flex-1">
-                                <p className="font-semibold text-slate-900">
-                                    Tiempo estimado
-                                </p>
-                                <p className="text-slate-600">
-                                    Entrega estimada: {orderInfo.estimatedTime}
-                                </p>
+                                <p className="font-semibold text-slate-900">Destino</p>
+                                <p className="text-slate-600">{packageInfo.destination}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Driver Contact (only if in transit) */}
-                    {orderInfo.status === "in_transit" && orderInfo.driverName && (
+                    {/* Receiver Info */}
+                    {packageInfo.receiverName && (
                         <div className="bg-slate-50 rounded-xl p-6">
                             <h3 className="font-semibold text-slate-900 mb-4">
-                                Información del conductor
+                                Destinatario
                             </h3>
                             <div className="flex items-center justify-between">
                                 <div>
                                     <p className="font-semibold text-slate-900">
-                                        {orderInfo.driverName}
+                                        {packageInfo.receiverName}
                                     </p>
-                                    <p className="text-slate-600">
-                                        Conductor asignado
-                                    </p>
-                                </div>
-                                <div className="flex gap-3">
-                                    <button className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center hover:bg-green-200 transition-colors">
-                                        <FiPhone size={18} className="text-green-600" />
-                                    </button>
-                                    <button className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center hover:bg-blue-200 transition-colors">
-                                        <FiMessageCircle size={18} className="text-blue-600" />
-                                    </button>
+
                                 </div>
                             </div>
                         </div>
-                    )}
-
-                    {/* Contact Driver Button */}
-                    {orderInfo.status === "in_transit" && (
-                        <Button className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl text-lg">
-                            Contactar al conductor
-                        </Button>
                     )}
                 </div>
 
                 {/* Right Panel - Map */}
                 <div className="flex-1 relative">
                     <GoogleMap
-                        center={currentDriverLocation || orderInfo.destinationLocation}
+                        center={currentDriverLocation || packageInfo.destinationLocation}
                         zoom={14}
                         markers={getMapMarkers()}
                         routePath={routePath}
