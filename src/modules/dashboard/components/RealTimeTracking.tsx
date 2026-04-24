@@ -16,13 +16,22 @@ export function RealTimeTracking() {
     const [selectedOrder, setSelectedOrder] = useState<number | null>(null);
     const { driversLocations, activeOrders, isConnected, recentIncidents } = useAdminTracking(selectedOrder || undefined);
 
-    // Calcular centro del mapa basado en todas las ubicaciones
+    // Calcular centro del mapa basado en la orden seleccionada o todas las ubicaciones
     const getMapCenter = () => {
+        // Si hay una orden seleccionada, centrar en ese conductor
+        if (selectedOrder) {
+            const selectedDriver = driversLocations.find(d => d.orderId === selectedOrder);
+            if (selectedDriver) {
+                return selectedDriver.location;
+            }
+        }
+
         if (driversLocations.length === 0) {
             // Default: Cartagena, Colombia
             return { lat: 10.3910, lng: -75.4794 };
         }
 
+        // Si no hay selección, promediar todas las ubicaciones
         const avgLat = driversLocations.reduce((sum, loc) => sum + loc.location.lat, 0) / driversLocations.length;
         const avgLng = driversLocations.reduce((sum, loc) => sum + loc.location.lng, 0) / driversLocations.length;
 
