@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/modules/shared/ui/Button";
 import { Input } from "@/modules/shared/ui/Input";
 import { ROUTES } from "@/modules/shared/constants/routes";
-import { FiPackage, FiSearch } from "react-icons/fi";
+import { FiPackage, FiSearch, FiArrowLeft } from "react-icons/fi";
 
 export function TrackingSearch() {
     const router = useRouter();
-    const [orderNumber, setOrderNumber] = useState("");
+    const [numPackage, setNumPackage] = useState("");
     const [isSearching, setIsSearching] = useState(false);
 
     const handleSearch = async () => {
-        if (!orderNumber.trim()) return;
+        if (!numPackage.trim()) return;
 
         setIsSearching(true);
 
@@ -21,7 +21,7 @@ export function TrackingSearch() {
         await new Promise(resolve => setTimeout(resolve, 800));
 
         // Navigate to tracking page
-        router.push(ROUTES.client.trackOrder(orderNumber.trim()));
+        router.push(ROUTES.client.trackPackage(numPackage.trim()));
         setIsSearching(false);
     };
 
@@ -36,8 +36,16 @@ export function TrackingSearch() {
 
             {/* Main Content */}
             <div className="flex-1 flex items-center justify-center p-6">
-                <div className="w-full max-w-md">
-                    <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+                <div className="w-full max-w-md relative">
+                    <div className="bg-white rounded-2xl shadow-lg p-8 text-center relative overflow-hidden">
+                        {/* Back Button */}
+                        <button
+                            onClick={() => router.push("/")}
+                            className="absolute top-6 left-6 text-slate-400 hover:text-blue-600 transition-colors"
+                            title="Volver al inicio"
+                        >
+                            <FiArrowLeft size={20} />
+                        </button>
                         {/* Icon */}
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
                             <FiPackage size={32} className="text-blue-600" />
@@ -45,12 +53,12 @@ export function TrackingSearch() {
 
                         {/* Title */}
                         <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                            Ingresa tu número de pedido
+                            Ingresa tu número de paquete
                         </h2>
 
                         {/* Description */}
                         <p className="text-slate-600 mb-8 leading-relaxed">
-                            Revisa el estado de tu pedido y su ubicación en tiempo real
+                            Revisa el estado de tu paquete y su ubicación en tiempo real
                         </p>
 
                         {/* Search Input */}
@@ -58,9 +66,9 @@ export function TrackingSearch() {
                             <div className="relative">
                                 <Input
                                     type="text"
-                                    placeholder="Ingresa el número de pedido"
-                                    value={orderNumber}
-                                    onChange={(e) => setOrderNumber(e.target.value)}
+                                    placeholder="Ingresa el número de paquete"
+                                    value={numPackage}
+                                    onChange={(e) => setNumPackage(e.target.value)}
                                     onKeyPress={handleKeyPress}
                                     className="w-full text-center text-lg py-4 px-6 bg-slate-50 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all"
                                     disabled={isSearching}
@@ -69,7 +77,7 @@ export function TrackingSearch() {
 
                             <Button
                                 onClick={handleSearch}
-                                disabled={!orderNumber.trim() || isSearching}
+                                disabled={!numPackage.trim() || isSearching}
                                 className="w-full py-4 text-lg font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition-all rounded-xl"
                             >
                                 {isSearching ? (
@@ -89,7 +97,7 @@ export function TrackingSearch() {
                         {/* Help Text */}
                         <div className="mt-8 pt-6 border-t border-slate-100">
                             <p className="text-sm text-slate-500">
-                                El número de pedido se encuentra en tu confirmación de compra
+                                El número de paquete se encuentra en tu confirmación de envío
                             </p>
                         </div>
                     </div>

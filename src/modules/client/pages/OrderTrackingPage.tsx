@@ -1,5 +1,5 @@
-import { OrderTracking } from "../components/OrderTracking";
+import { PackageTracking } from "../components/PackageTracking";
 
-export function OrderTrackingPage() {
-    return <OrderTracking />;
+export function PackageTrackingPage() {
+    return <PackageTracking />;
 }

@@ -23,7 +23,7 @@ export const ROUTES = {
     },
     client: {
         tracking: "/seguimiento",
-        trackOrder: (orderNumber: string) => `/seguimiento/${orderNumber}`,
+        trackPackage: (numPackage: string) => `/seguimiento/${numPackage}`,
     },
     driver: {
         orders: "/conductor/ordenes",
