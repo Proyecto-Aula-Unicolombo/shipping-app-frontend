@@ -227,6 +227,7 @@ export default function OrdersPage() {
                             <option value="en camino">En camino</option>
                             <option value="entregado">Entregado</option>
                             <option value="pendiente">Pendiente</option>
+                            <option value="cancelada">Cancelada</option>
                             <option value="asignada">Asignada</option>
 
                         </select>

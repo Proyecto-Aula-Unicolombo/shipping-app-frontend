@@ -5,12 +5,12 @@ import { ROUTES } from "@/modules/shared/constants/routes";
 import Link from "next/link";
 
 export function OrdersListPage() {
-    const { 
-        orders, 
-        unassignedOrders, 
-        isLoading, 
-        isError, 
-        error 
+    const {
+        orders,
+        unassignedOrders,
+        isLoading,
+        isError,
+        error
     } = useOrderQueryStore();
 
     if (isLoading) {
@@ -45,6 +45,8 @@ export function OrdersListPage() {
                 return "bg-blue-50 text-blue-700";
             case "Pendiente":
                 return "bg-amber-50 text-amber-600";
+            case "Cancelada":
+                return "bg-red-50 text-red-700"
             default:
                 return "bg-slate-50 text-slate-600";
         }
@@ -64,7 +66,7 @@ export function OrdersListPage() {
             {/* Orders with Drivers */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-slate-900">Órdenes Asignadas</h2>
-                
+
                 <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
                     <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
                         <div className="grid grid-cols-7 gap-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
@@ -109,7 +111,7 @@ export function OrdersListPage() {
             {/* Unassigned Orders */}
             <section className="space-y-4">
                 <h2 className="text-lg font-semibold text-slate-900">Órdenes Sin Asignar</h2>
-                
+
                 <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
                     <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
                         <div className="grid grid-cols-6 gap-4 text-xs font-semibold uppercase tracking-wide text-slate-500">
