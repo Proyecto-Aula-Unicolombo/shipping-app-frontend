@@ -11,11 +11,9 @@ import {
     FiTruck,
     FiMapPin,
     FiClock,
-    FiPhone,
-    FiMessageCircle,
-    FiNavigation,
     FiPackage,
-    FiAlertTriangle
+    FiAlertTriangle,
+    FiArrowLeft
 } from "react-icons/fi";
 
 interface TrackUpdate {
@@ -35,28 +33,9 @@ export function PackageTracking() {
     // Real-time location state
     const [realtimeLocation, setRealtimeLocation] = useState<{ lat: number; lng: number } | null>(null);
 
-    // Route path history (todas las ubicaciones del recorrido)
-    // Inicializar con el historial de la API y agregar nuevas ubicaciones en tiempo real
-    const [routePath, setRoutePath] = useState<Array<{ lat: number; lng: number }>>([]);
 
-    // Sincronizar routePath con trackHistory cuando cambie
-    useEffect(() => {
-        if (trackHistory.length > 0) {
-            setRoutePath(trackHistory);
-        }
-    }, [trackHistory]);
 
-    // Memoize WebSocket callbacks to prevent reconnection loops
-    const handleWebSocketOpen = useCallback((ws: WebSocket) => {
-        console.log('🔌 WebSocket connected for package tracking');
-        // Subscribe to updates - the backend still uses order_ids for the WS subscription
-        ws.send(JSON.stringify({
-            type: 'subscribe',
-            role: 'client',
-            order_ids: [parseInt(numPackage, 10)]
-        }));
-    }, [numPackage]);
-
+    // WebSocket message handler
     const handleWebSocketMessage = useCallback((message: { type: string; payload: unknown }) => {
         console.log('📨 WebSocket message recibido:', message);
         if (message.type === 'track_update') {
@@ -68,25 +47,29 @@ export function PackageTracking() {
                 lng: payload.longitude
             };
             setRealtimeLocation(newLocation);
-
-            // Agregar nueva ubicación al recorrido
-            setRoutePath(prev => {
-                const newPath = [...prev, newLocation];
-                console.log('🛣️  Ruta actualizada. Total puntos:', newPath.length);
-                return newPath;
-            });
         } else if (message.type === 'connected') {
             console.log('✅ Mensaje de bienvenida del servidor');
         }
     }, []);
 
     // WebSocket connection for real-time updates
-    const { isConnected, lastMessage } = useWebSocket({
-        onOpen: handleWebSocketOpen,
+    const { isConnected, sendRaw } = useWebSocket({
         onMessage: handleWebSocketMessage,
         reconnect: true,
         maxReconnectAttempts: 3
     });
+
+    // Subscribe to WebSocket updates once connected AND packageInfo is loaded
+    useEffect(() => {
+        if (isConnected && packageInfo) {
+            console.log('🔌 Subscribing to package tracking with packageId:', packageInfo.packageId);
+            sendRaw({
+                type: 'subscribe',
+                role: 'client',
+                order_ids: [packageInfo.packageId]
+            });
+        }
+    }, [isConnected, packageInfo, sendRaw]);
 
     // Use realtime location if available, otherwise use packageInfo location
     const currentDriverLocation = realtimeLocation || packageInfo?.currentLocation;
@@ -135,17 +118,6 @@ export function PackageTracking() {
         if (!packageInfo) return [];
 
         const markers = [];
-
-        // Destination marker
-        markers.push({
-            id: "destination",
-            position: {
-                lat: packageInfo.destinationLocation.lat,
-                lng: packageInfo.destinationLocation.lng
-            },
-            title: "Destino",
-            icon: "🏠"
-        });
 
         // Driver location marker (if in transit) - Use realtime location if available
         if (packageInfo.status === "in_transit" && currentDriverLocation) {
@@ -208,46 +180,26 @@ export function PackageTracking() {
                 {/* Map */}
                 <div className="h-[30rem] relative">
                     <GoogleMap
-                        center={currentDriverLocation || packageInfo.destinationLocation}
+                        center={currentDriverLocation || { lat: 10.3910, lng: -75.5146 }}
                         zoom={14}
                         markers={getMapMarkers()}
-                        routePath={routePath}
                         className="w-full h-full"
                     />
-
-                    {/* Search overlay */}
-                    <div className="absolute top-4 left-4 right-4">
-                        <div className="bg-white rounded-lg shadow-md px-4 py-2 flex items-center gap-2">
-                            <FiNavigation size={16} className="text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar ubicación..."
-                                className="flex-1 bg-transparent text-sm text-slate-600 placeholder-slate-400 outline-none"
-                                readOnly
-                            />
-                        </div>
-                    </div>
-
-                    {/* Map controls */}
-                    <div className="absolute bottom-4 right-4 flex flex-col gap-2">
-                        <button className="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center hover:bg-slate-50 transition-colors">
-                            <span className="text-lg font-semibold text-slate-600">+</span>
-                        </button>
-                        <button className="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center hover:bg-slate-50 transition-colors">
-                            <span className="text-lg font-semibold text-slate-600">-</span>
-                        </button>
-                    </div>
-
-                    {/* Location button */}
-                    <div className="absolute bottom-4 left-4">
-                        <button className="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center hover:bg-slate-50 transition-colors">
-                            <FiNavigation size={16} className="text-slate-600" />
-                        </button>
-                    </div>
                 </div>
 
                 {/* Package Info */}
                 <div className="flex-1 bg-white rounded-t-3xl -mt-6 relative z-10 p-6 space-y-6">
+                    {/* Header with Back Button */}
+                    <div className="flex items-center justify-between">
+                        <button
+                            onClick={() => router.push(ROUTES.client.tracking)}
+                            className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors font-medium text-sm"
+                        >
+                            <FiArrowLeft size={18} />
+                            Volver
+                        </button>
+                    </div>
+
                     {/* Status */}
                     <div className={`inline-flex items-center gap-2 px-3 py-2 rounded-full ${statusInfo.bgColor}`}>
                         <StatusIcon size={16} className={statusInfo.color} />
@@ -326,6 +278,15 @@ export function PackageTracking() {
             <div className="hidden lg:flex min-h-screen max-w-7xl mx-auto">
                 {/* Left Panel - Package Info */}
                 <div className="w-96 bg-white shadow-lg p-8 space-y-6 overflow-y-auto">
+                    {/* Back Button */}
+                    <button
+                        onClick={() => router.push(ROUTES.client.tracking)}
+                        className="flex items-center gap-2 text-slate-600 hover:text-blue-600 transition-colors font-medium mb-2"
+                    >
+                        <FiArrowLeft size={20} />
+                        Volver a buscar
+                    </button>
+
                     {/* Status */}
                     <div className={`inline-flex items-center gap-2 px-4 py-3 rounded-full ${statusInfo.bgColor}`}>
                         <StatusIcon size={20} className={statusInfo.color} />
@@ -403,42 +364,11 @@ export function PackageTracking() {
                 {/* Right Panel - Map */}
                 <div className="flex-1 relative">
                     <GoogleMap
-                        center={currentDriverLocation || packageInfo.destinationLocation}
+                        center={currentDriverLocation || { lat: 10.3910, lng: -75.5146 }}
                         zoom={14}
                         markers={getMapMarkers()}
-                        routePath={routePath}
                         className="w-full h-full"
                     />
-
-                    {/* Search overlay */}
-                    <div className="absolute top-6 left-6 right-6">
-                        <div className="bg-white rounded-lg shadow-lg px-6 py-4 flex items-center gap-3 max-w-md">
-                            <FiNavigation size={18} className="text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Buscar ubicación..."
-                                className="flex-1 bg-transparent text-slate-600 placeholder-slate-400 outline-none"
-                                readOnly
-                            />
-                        </div>
-                    </div>
-
-                    {/* Map controls */}
-                    <div className="absolute bottom-6 right-6 flex flex-col gap-3">
-                        <button className="w-12 h-12 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-slate-50 transition-colors">
-                            <span className="text-xl font-semibold text-slate-600">+</span>
-                        </button>
-                        <button className="w-12 h-12 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-slate-50 transition-colors">
-                            <span className="text-xl font-semibold text-slate-600">−</span>
-                        </button>
-                    </div>
-
-                    {/* Location button */}
-                    <div className="absolute bottom-6 left-6">
-                        <button className="w-12 h-12 bg-white rounded-lg shadow-lg flex items-center justify-center hover:bg-slate-50 transition-colors">
-                            <FiNavigation size={18} className="text-slate-600" />
-                        </button>
-                    </div>
                 </div>
             </div>
         </div>

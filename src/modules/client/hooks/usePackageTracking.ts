@@ -4,6 +4,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1
 
 export interface PackageInfo {
     packageId: number;
+    orderId?: number;
     numPackage: string;
     status: "pending" | "in_transit" | "delivered" | "cancelled";
     origin: string;
@@ -29,6 +30,7 @@ interface LocationInfo {
 
 interface TrackPackageAPIResponse {
     package_id: number;
+    order_id?: number;
     num_package: string;
     status: string;
     origin: string;
@@ -101,6 +103,7 @@ export function usePackageTracking(num_package: string) {
 
                 const pkgInfo: PackageInfo = {
                     packageId: data.package_id,
+                    orderId: data.order_id,
                     numPackage: data.num_package,
                     status: mapStatus(data.status),
                     origin: data.origin || "Origen no disponible",

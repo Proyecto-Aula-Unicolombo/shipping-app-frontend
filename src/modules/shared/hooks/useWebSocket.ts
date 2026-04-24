@@ -19,6 +19,7 @@ interface UseWebSocketReturn {
     isConnected: boolean;
     lastMessage: WebSocketMessage | null;
     sendMessage: (message: WebSocketMessage) => void;
+    sendRaw: (data: Record<string, unknown>) => void;
     reconnect: () => void;
 }
 
@@ -138,6 +139,14 @@ export function useWebSocket(
         }
     }, []);
 
+    const sendRaw = useCallback((data: Record<string, unknown>) => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify(data));
+        } else {
+            console.warn('WebSocket is not connected. Raw message not sent.');
+        }
+    }, []);
+
     const manualReconnect = useCallback(() => {
         reconnectAttemptsRef.current = 0;
         connect();
@@ -160,6 +169,7 @@ export function useWebSocket(
         isConnected,
         lastMessage,
         sendMessage,
+        sendRaw,
         reconnect: manualReconnect,
     };
 }

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/modules/shared/ui/Button";
 import { Input } from "@/modules/shared/ui/Input";
 import { ROUTES } from "@/modules/shared/constants/routes";
-import { FiPackage, FiSearch } from "react-icons/fi";
+import { FiPackage, FiSearch, FiArrowLeft } from "react-icons/fi";
 
 export function TrackingSearch() {
     const router = useRouter();
@@ -36,8 +36,16 @@ export function TrackingSearch() {
 
             {/* Main Content */}
             <div className="flex-1 flex items-center justify-center p-6">
-                <div className="w-full max-w-md">
-                    <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
+                <div className="w-full max-w-md relative">
+                    <div className="bg-white rounded-2xl shadow-lg p-8 text-center relative overflow-hidden">
+                        {/* Back Button */}
+                        <button
+                            onClick={() => router.push("/")}
+                            className="absolute top-6 left-6 text-slate-400 hover:text-blue-600 transition-colors"
+                            title="Volver al inicio"
+                        >
+                            <FiArrowLeft size={20} />
+                        </button>
                         {/* Icon */}
                         <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
                             <FiPackage size={32} className="text-blue-600" />
