@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { startTransition, useCallback, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/modules/shared/ui/Button";
 import { useOrderQueryStore } from "../hooks/useOrderQueryStore";
@@ -10,6 +10,8 @@ import { useDriverQueryStore } from "../../drivers/hooks/useDriverQueryStore";
 import { useVehicleQueryStore } from "../../vehicles/hooks/useVehicleQueryStore";
 import { PackageResponse } from "@/types/ordersWithPackage";
 import { TablePagination } from "@/modules/shared/components/table/TablePagination";
+import { VehicleCombobox } from "./VehicleComboBox";
+import { DriverCombobox } from "./DriverCombobox";
 
 interface SelectedPackage {
     packageId: number;
@@ -43,8 +45,8 @@ export function CreateOrderForm() {
     const [selectedPackages, setSelectedPackages] = useState<SelectedPackage[]>([]);
     const [serviceType, setServiceType] = useState<"standard delivery" | "express delivery">("standard delivery");
     const [notes, setNotes] = useState("");
-    const [driverId, setDriverId] = useState<number | null>(null);
-    const [vehicleId, setVehicleId] = useState<number | null>(null);
+    const [selectedDriverId, setSelectedDriverId] = useState<number | undefined>(undefined);
+    const [selectedVehicleId, setSelectedVehicleId] = useState<number | undefined>(undefined);
 
     // Get available drivers and vehicles
     const {
@@ -58,6 +60,33 @@ export function CreateOrderForm() {
         isLoadingUnassigned: isLoadingVehicles,
         isErrorUnassigned: isErrorVehicles,
     } = useVehicleQueryStore();
+
+    const availableDrivers = useMemo(() => driversUnassigned || [], [driversUnassigned]);
+    const availableVehicles = useMemo(() => vehiclesUnassigned || [], [vehiclesUnassigned]);
+
+    // Memoize selected driver and vehicle to avoid repeated .find() calls
+    const selectedDriver = useMemo(
+        () => availableDrivers.find(d => d.ID === selectedDriverId),
+        [availableDrivers, selectedDriverId]
+    );
+
+    const selectedVehicle = useMemo(
+        () => availableVehicles.find(v => v.ID === selectedVehicleId),
+        [availableVehicles, selectedVehicleId]
+    );
+
+
+    const handleDriverChange = useCallback((value: number | undefined) => {
+        startTransition(() => {
+            setSelectedDriverId(value);
+        });
+    }, []);
+
+    const handleVehicleChange = useCallback((value: number | undefined) => {
+        startTransition(() => {
+            setSelectedVehicleId(value);
+        });
+    }, []);
 
     const handlePackageToggle = (pkg: PackageResponse) => {
         const isSelected = selectedPackages.some(sp => sp.packageId === pkg.ID);
@@ -102,8 +131,8 @@ export function CreateOrderForm() {
             await createOrderAsync({
                 package_ids: selectedPackages.map(p => p.packageId.toString()),
                 serviceType,
-                driverId: driverId || undefined,
-                vehicleId: vehicleId || undefined,
+                driverId: selectedDriverId || undefined,
+                vehicleId: selectedVehicleId || undefined,
                 notes: notes || undefined,
             });
             router.push(ROUTES.dashboard.orders);
@@ -278,9 +307,6 @@ export function CreateOrderForm() {
 
                     {/* Driver Selection */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">
-                            Conductor (Opcional)
-                        </label>
                         {isLoadingDrivers ? (
                             <div className="flex items-center justify-center py-3 border border-slate-300 rounded-md">
                                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
@@ -291,22 +317,13 @@ export function CreateOrderForm() {
                                 <span className="text-sm text-red-600">Error al cargar conductores</span>
                             </div>
                         ) : (
-                            <select
-                                value={driverId || ""}
-                                onChange={(e) => setDriverId(e.target.value ? Number(e.target.value) : null)}
-                                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="">Seleccionar conductor</option>
-                                {driversUnassigned.length === 0 ? (
-                                    <option disabled>No hay conductores disponibles</option>
-                                ) : (
-                                    driversUnassigned.map((driver) => (
-                                        <option key={driver.ID} value={driver.ID}>
-                                            {driver.Name} {driver.LastName} - {driver.License}
-                                        </option>
-                                    ))
-                                )}
-                            </select>
+                            <DriverCombobox
+                                drivers={availableDrivers}
+                                value={selectedDriverId}
+                                onChange={handleDriverChange}
+                                isLoading={isLoadingDrivers}
+                                label="Conductor (Opcional)"
+                            />
                         )}
                         {!isLoadingDrivers && driversUnassigned.length === 0 && (
                             <p className="text-xs text-amber-600 mt-1">
@@ -317,9 +334,6 @@ export function CreateOrderForm() {
 
                     {/* Vehicle Selection */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700">
-                            Vehículo (Opcional)
-                        </label>
                         {isLoadingVehicles ? (
                             <div className="flex items-center justify-center py-3 border border-slate-300 rounded-md">
                                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
@@ -330,22 +344,15 @@ export function CreateOrderForm() {
                                 <span className="text-sm text-red-600">Error al cargar vehículos</span>
                             </div>
                         ) : (
-                            <select
-                                value={vehicleId || ""}
-                                onChange={(e) => setVehicleId(e.target.value ? Number(e.target.value) : null)}
-                                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                                <option value="">Seleccionar vehículo</option>
-                                {vehiclesUnassigned.length === 0 ? (
-                                    <option disabled>No hay vehículos disponibles</option>
-                                ) : (
-                                    vehiclesUnassigned.map((vehicle) => (
-                                        <option key={vehicle.ID} value={vehicle.ID}>
-                                            {vehicle.Plate} - {vehicle.Brand} {vehicle.Model} ({vehicle.VehicleType})
-                                        </option>
-                                    ))
-                                )}
-                            </select>
+
+                            <VehicleCombobox
+                                vehicles={availableVehicles}
+                                value={selectedVehicleId}
+                                onChange={handleVehicleChange}
+                                isLoading={isLoadingVehicles}
+                                label="Vehículo (Opcional)"
+                            />
+
                         )}
                         {!isLoadingVehicles && vehiclesUnassigned.length === 0 && (
                             <p className="text-xs text-amber-600 mt-1">

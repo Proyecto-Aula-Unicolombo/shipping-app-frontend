@@ -16,6 +16,7 @@ interface DriverComboboxProps {
     value: number | undefined;
     onChange: (value: number | undefined) => void;
     isLoading?: boolean;
+    label?: string;
 }
 
 type DriverOption = {
@@ -28,6 +29,7 @@ export const DriverCombobox = memo(function DriverCombobox({
     value,
     onChange,
     isLoading = false,
+    label = "Conductor a asignar",
 }: DriverComboboxProps) {
     const options = useMemo<DriverOption[]>(
         () =>
@@ -48,7 +50,7 @@ export const DriverCombobox = memo(function DriverCombobox({
     };
 
     return (
-        <FormField label="Conductor Asignado" htmlFor="driverId">
+        <FormField label={label} htmlFor="driverId">
             <ReactSelect
                 inputId="driverId"
                 options={options}
