@@ -65,10 +65,6 @@ export default function IncidentsPage() {
                         <FiRefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
                         Actualizar
                     </Button>
-                    <Button className="flex items-center gap-2">
-                        <FiPlus size={16} />
-                        Reportar Incidente
-                    </Button>
                 </div>
             </div>
 
