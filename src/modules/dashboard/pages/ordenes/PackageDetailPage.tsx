@@ -5,8 +5,7 @@ import { PageHeader } from "../../components/PageHeader";
 import { BackButton } from "../../components/BackButton";
 import { usePackageQueryStore } from "../../orders/hooks/usePakcageQueryStore";
 
-// Status type from API (lowercase)
-type PackageStatus = "pendiente" | "asignado" | "en camino" | "entregado" | "cancelado";
+
 
 // Format status from API (lowercase) to display (capitalized)
 const formatStatus = (status: string): string => {
@@ -23,10 +22,47 @@ const formatStatus = (status: string): string => {
 
 // Helper function to format Base64 images
 const formatBase64Image = (base64String: string): string => {
-    if (base64String.startsWith('data:image/')) {
-        return base64String;
+    if (!base64String) return '';
+
+    // if (base64String.startsWith('data:image/')) {
+    //     return base64String;
+    // }
+
+    const signatures: Record<string, string> = {
+        '/9j/': 'image/jpeg',
+        'iVBORw0KGgo': 'image/png',
+        'R0lGOD': 'image/gif',
+        'UklGR': 'image/webp',
+    };
+
+    // for (const [signature, type] of Object.entries(signatures)) {
+    //     if (base64String.startsWith(signature)) {
+    //         return `data:image/${type};base64,${base64String}`;
+    //     }
+    // }
+
+    // return `data:image/png;base64,${base64String}`;
+
+    let mimeType = 'image/png';
+    for (const [signature, type] of Object.entries(signatures)) {
+        if (base64String.startsWith(signature)) {
+            mimeType = type;
+            break;
+        }
     }
-    return `data:image/png;base64,${base64String}`;
+
+    try {
+        const byteCharacters = atob(base64String);
+        const byteNumbers = new Uint8Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const blob = new Blob([byteNumbers], { type: mimeType });
+        return URL.createObjectURL(blob);
+    } catch (e) {
+        console.error('Error convirtiendo base64:', e);
+        return '';
+    }
 };
 
 const STATUS_STYLES: Record<string, string> = {
@@ -45,6 +81,11 @@ export default function PackageDetailPage() {
     const { packagaDetail: packageData, isloadingDetail, isErrorDetail } = usePackageQueryStore({
         packageId
     });
+
+    const raw = packageData?.DeliveryInformation?.PhotoDelivery;
+    const formatted = formatBase64Image(raw!);
+    console.log('Primeros chars:', raw?.substring(0, 20));
+    console.log('URL generada:', formatted?.substring(0, 50));
 
     if (isloadingDetail) {
         return (
@@ -200,6 +241,7 @@ export default function PackageDetailPage() {
                                             style={{ maxHeight: '500px' }}
                                             onError={(e) => {
                                                 const target = e.target as HTMLImageElement;
+                                                console.error('❌ Error cargando imagen');
                                                 target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect fill="%23f1f5f9"/><text x="50%" y="50%" text-anchor="middle" fill="%2364748b" font-family="sans-serif" font-size="14">Imagen no disponible</text></svg>';
                                             }}
                                         />

@@ -57,13 +57,20 @@ export default function VehiclesPage() {
             limit: pageSize,
             page: page,
             plate_brand_or_model: debouncedSearchTerm,
+            vehicle_type: typeFilter !== "all" ? typeFilter : undefined,
         }
     });
 
     const filteredVehicles = useMemo(() => {
-        if (typeFilter === "all") return vehicles;
-        return vehicles.filter(v => v.VehicleType === typeFilter);
-    }, [vehicles, typeFilter]);
+        const uniqueMap = new Map();
+        vehicles.forEach(v => {
+            if (!uniqueMap.has(v.ID)) {
+                uniqueMap.set(v.ID, v);
+            }
+        });
+
+        return Array.from(uniqueMap.values());
+    }, [vehicles]);
 
 
     const stats = {
