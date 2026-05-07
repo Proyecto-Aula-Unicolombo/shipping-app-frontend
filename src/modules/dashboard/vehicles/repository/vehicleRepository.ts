@@ -1,11 +1,12 @@
 import { api } from '@/lib/apiClient';
-import {  Vehicle } from '@/types/domain';
+import { Vehicle } from '@/types/domain';
 import { CreateVehicleDTO, UpdateVehicleDTO, VehicleListAPIResponse, VehicleLListUnassignedAPIResponse } from '@/types/vehicles';
 
 export interface VehicleListParams {
   page: number;
   limit: number;
   plate_brand_or_model?: string;
+  vehicle_type?: string;
 }
 
 
@@ -15,14 +16,18 @@ export const vehiclesRepository = {
       limit: params?.limit.toString() || "10",
       page: params?.page.toString() || "1",
     });
-    
+
     if (params?.plate_brand_or_model && params.plate_brand_or_model.trim()) {
       queryParams.append("plate_brand_or_model", params.plate_brand_or_model.trim());
     }
-    const res = await api.get(`/vehicles/?${queryParams.toString()}`);
+
+    if (params?.vehicle_type && params.vehicle_type !== "all") {
+      queryParams.append("vehicle_type", params.vehicle_type);
+    }
+    const res = await api.get(`/vehicles?${queryParams.toString()}`);
     return res.data;
   },
-  
+
   listUnassigned: async (): Promise<VehicleLListUnassignedAPIResponse[]> => {
     const res = await api.get('/vehicles/unassigned');
     return res.data;
