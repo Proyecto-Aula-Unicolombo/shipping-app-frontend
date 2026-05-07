@@ -61,12 +61,12 @@ export function PackageTracking() {
 
     // Subscribe to WebSocket updates once connected AND packageInfo is loaded
     useEffect(() => {
-        if (isConnected && packageInfo) {
-            console.log('🔌 Subscribing to package tracking with packageId:', packageInfo.packageId);
+        if (isConnected && packageInfo?.orderId) {
+            console.log('🔌 Subscribing to tracking updates for orderId:', packageInfo.orderId);
             sendRaw({
                 type: 'subscribe',
                 role: 'client',
-                order_ids: [packageInfo.packageId]
+                order_ids: [packageInfo.orderId]
             });
         }
     }, [isConnected, packageInfo, sendRaw]);
