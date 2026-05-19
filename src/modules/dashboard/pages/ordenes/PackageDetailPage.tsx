@@ -235,7 +235,7 @@ export default function PackageDetailPage() {
                                     </p>
                                     <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 overflow-hidden">
                                         <img
-                                            src={formatBase64Image(packageData.DeliveryInformation.PhotoDelivery)}
+                                            src={packageData.DeliveryInformation.PhotoDelivery}
                                             alt="Foto de entrega del paquete"
                                             className="w-full max-w-2xl h-auto rounded-lg shadow-sm object-contain"
                                             style={{ maxHeight: '500px' }}
@@ -259,7 +259,7 @@ export default function PackageDetailPage() {
                                         <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 overflow-hidden">
                                             <div className="bg-white rounded border border-slate-300 p-2 inline-block max-w-full">
                                                 <img
-                                                    src={formatBase64Image(packageData.DeliveryInformation.SignatureReceived)}
+                                                    src={packageData.DeliveryInformation.SignatureReceived}
                                                     alt="Firma digital del receptor"
                                                     className="w-full max-w-md h-auto object-contain"
                                                     style={{ maxHeight: '200px' }}
@@ -329,7 +329,7 @@ export default function PackageDetailPage() {
                                         </p>
                                         <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 overflow-hidden">
                                             <img
-                                                src={formatBase64Image(packageData.DeliveryInformation.PhotoDelivery)}
+                                                src={packageData.DeliveryInformation.PhotoDelivery}
                                                 alt="Foto del incidente"
                                                 className="w-full max-w-2xl h-auto rounded-lg shadow-sm object-contain"
                                                 style={{ maxHeight: '500px' }}

@@ -122,10 +122,12 @@ export default function OrderDetailPage() {
                 </div>
                 <div className="flex items-center gap-3 flex-wrap sm:flex-nowrap">
                     <span className={`inline-flex rounded-full px-4 py-1.5 text-sm font-semibold whitespace-nowrap ${order.Status === "en camino" ? "bg-blue-50 text-blue-700" :
-                        order.Status === "entregado" ? "bg-emerald-50 text-emerald-700" :
+                        order.Status === "completada" ? "bg-emerald-50 text-emerald-700" :
                             order.Status === "asignada" ? "bg-purple-50 text-purple-700" :
                                 order.Status === "incidente" ? "bg-red-50 text-red-700" :
-                                    "bg-amber-50 text-amber-600"
+                                    order.Status === "cancelada" ? "bg-red-300 text-red-600" :
+                                        order.Status === "parcialmente_completada" ? "bg-blue-300 text-blue-700" :
+                                            "bg-amber-50 text-amber-600"
                         }`}>
                         {order.Status}
                     </span>
@@ -202,12 +204,14 @@ export default function OrderDetailPage() {
             </div>
 
             {/* Additional Info */}
-            {order.Observation && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-                    <h4 className="text-sm font-semibold text-amber-800 mb-1">Observaciones</h4>
-                    <p className="text-sm text-amber-700">{order.Observation}</p>
-                </div>
-            )}
+            {
+                order.Observation && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                        <h4 className="text-sm font-semibold text-amber-800 mb-1">Observaciones</h4>
+                        <p className="text-sm text-amber-700">{order.Observation}</p>
+                    </div>
+                )
+            }
 
             {/* Packages Section */}
             <div className="space-y-4">
@@ -222,6 +226,6 @@ export default function OrderDetailPage() {
                     emptyState="No hay paquetes asociados a esta orden"
                 />
             </div>
-        </div>
+        </div >
     );
 }
